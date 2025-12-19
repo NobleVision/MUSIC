@@ -2,6 +2,24 @@
 
 A comprehensive media management and distribution platform with secure admin access, hierarchical organization, social features, and public sharing capabilities.
 
+## Recent Changes (December 2024)
+
+### Vercel Deployment Configuration
+- **Added `vercel.json`**: Configured Vercel deployment with proper build commands, output directory, and URL rewrites
+- **Added `api/index.ts`**: Created serverless API handler for Express/tRPC backend on Vercel
+- **Updated `tsconfig.json`**: Added `api/**/*` to TypeScript includes
+
+### Console Error Fixes
+- **Removed Umami analytics script**: Cleaned up `client/index.html` to remove unused analytics that caused console errors
+- **Simplified login URL**: Updated `client/src/const.ts` to return `/login` directly instead of constructing OAuth URLs with undefined environment variables
+
+### Files Modified
+- `vercel.json` (new)
+- `api/index.ts` (new)
+- `tsconfig.json`
+- `client/index.html`
+- `client/src/const.ts`
+
 ## Features
 
 ### Core Functionality
