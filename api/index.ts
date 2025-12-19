@@ -1,0 +1,42 @@
+import "dotenv/config";
+import express from "express";
+import type { Request, Response } from "express";
+import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import { appRouter } from "../server/routers";
+import { createContext } from "../server/_core/context";
+import { registerOAuthRoutes } from "../server/_core/oauth";
+import { uploadRouter } from "../server/upload";
+import { externalApiRouter } from "../server/external-api";
+
+const app = express();
+
+// Configure body parser with larger size limit for file uploads
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
+
+// OAuth callback under /api/oauth/callback
+registerOAuthRoutes(app);
+
+// Upload endpoint
+app.use("/api", uploadRouter);
+
+// External API endpoints
+app.use("/api", externalApiRouter);
+
+// tRPC API
+app.use(
+  "/api/trpc",
+  createExpressMiddleware({
+    router: appRouter,
+    createContext,
+  })
+);
+
+// Health check
+app.get("/api/health", (_req: Request, res: Response) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Export the Express app for Vercel serverless
+export default app;
+
