@@ -392,8 +392,14 @@ export const appRouter = router({
           displayOrder: input.displayOrder || 0,
         });
         
+        // Add to activity feed
+        await createActivityFeedItem(
+          "upload",
+          undefined, // We don't have the mediaFileId here
+          input.title
+        );
+        
         // Broadcast upload event to SSE clients
-        // Note: We don't have the mediaFileId here, but we can still broadcast the title
         broadcastActivity("upload", 0, input.title);
         
         return { success: true };
@@ -583,6 +589,15 @@ export const appRouter = router({
           content: input.content,
           parentCommentId: input.parentCommentId || null,
         });
+        
+        // Add to activity feed
+        if (mediaFile) {
+          await createActivityFeedItem(
+            "comment",
+            input.mediaFileId,
+            mediaFile.title
+          );
+        }
         
         // Broadcast comment event to SSE clients
         if (mediaFile) {

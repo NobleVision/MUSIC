@@ -1671,3 +1671,166 @@ describe("API Error Message Descriptiveness (Property 14)", () => {
     }
   });
 });
+
+
+// ============================================================================
+// Engagement Metrics in Media File Response Property Tests
+// ============================================================================
+
+/**
+ * Feature: social-engagement, Property 5: Engagement Metrics in Media File Response
+ * Validates: Requirements 2.3, 3.3, 4.3
+ * 
+ * For any media file query response, the returned data SHALL include all
+ * engagement metrics: playCount, downloadCount, viewCount, upvotes, and
+ * downvotes as numeric values.
+ */
+describe("Engagement Metrics in Media File Response (Property 5)", () => {
+  // Property: Trending media includes all engagement metrics
+  it("should include all engagement metrics in trending media response", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 1, max: 50 }), // limit
+        async (limit) => {
+          const items = await getTrendingMedia(limit);
+          
+          for (const item of items) {
+            // All engagement metrics should be present and numeric
+            expect(typeof item.playCount).toBe("number");
+            expect(typeof item.downloadCount).toBe("number");
+            expect(typeof item.viewCount).toBe("number");
+            expect(typeof item.upvotes).toBe("number");
+            expect(typeof item.downvotes).toBe("number");
+            
+            // All counts should be non-negative
+            expect(item.playCount).toBeGreaterThanOrEqual(0);
+            expect(item.downloadCount).toBeGreaterThanOrEqual(0);
+            expect(item.viewCount).toBeGreaterThanOrEqual(0);
+            expect(item.upvotes).toBeGreaterThanOrEqual(0);
+            expect(item.downvotes).toBeGreaterThanOrEqual(0);
+          }
+          
+          return true;
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  // Property: Popular media includes all engagement metrics
+  it("should include all engagement metrics in popular media response", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.constantFrom("24h", "7d", "30d", "all") as fc.Arbitrary<TimePeriod>,
+        fc.integer({ min: 1, max: 50 }), // limit
+        async (period, limit) => {
+          const items = await getPopularMedia(period, limit);
+          
+          for (const item of items) {
+            // All engagement metrics should be present and numeric
+            expect(typeof item.playCount).toBe("number");
+            expect(typeof item.downloadCount).toBe("number");
+            expect(typeof item.viewCount).toBe("number");
+            expect(typeof item.upvotes).toBe("number");
+            expect(typeof item.downvotes).toBe("number");
+            
+            // All counts should be non-negative
+            expect(item.playCount).toBeGreaterThanOrEqual(0);
+            expect(item.downloadCount).toBeGreaterThanOrEqual(0);
+            expect(item.viewCount).toBeGreaterThanOrEqual(0);
+            expect(item.upvotes).toBeGreaterThanOrEqual(0);
+            expect(item.downvotes).toBeGreaterThanOrEqual(0);
+          }
+          
+          return true;
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  // Property: Hot media includes all engagement metrics
+  it("should include all engagement metrics in hot media response", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 1, max: 50 }), // limit
+        async (limit) => {
+          const items = await getHotMedia(limit);
+          
+          for (const item of items) {
+            // All engagement metrics should be present and numeric
+            expect(typeof item.playCount).toBe("number");
+            expect(typeof item.downloadCount).toBe("number");
+            expect(typeof item.viewCount).toBe("number");
+            expect(typeof item.upvotes).toBe("number");
+            expect(typeof item.downvotes).toBe("number");
+            
+            // All counts should be non-negative
+            expect(item.playCount).toBeGreaterThanOrEqual(0);
+            expect(item.downloadCount).toBeGreaterThanOrEqual(0);
+            expect(item.viewCount).toBeGreaterThanOrEqual(0);
+            expect(item.upvotes).toBeGreaterThanOrEqual(0);
+            expect(item.downvotes).toBeGreaterThanOrEqual(0);
+          }
+          
+          return true;
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  // Property: Engagement metrics are integers
+  it("should return engagement metrics as integers", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 1, max: 20 }), // limit
+        async (limit) => {
+          const trendingItems = await getTrendingMedia(limit);
+          const popularItems = await getPopularMedia("all", limit);
+          const hotItems = await getHotMedia(limit);
+          
+          const allItems = [...trendingItems, ...popularItems, ...hotItems];
+          
+          for (const item of allItems) {
+            // All engagement metrics should be integers
+            expect(Number.isInteger(item.playCount)).toBe(true);
+            expect(Number.isInteger(item.downloadCount)).toBe(true);
+            expect(Number.isInteger(item.viewCount)).toBe(true);
+            expect(Number.isInteger(item.upvotes)).toBe(true);
+            expect(Number.isInteger(item.downvotes)).toBe(true);
+            expect(Number.isInteger(item.hotnessScore)).toBe(true);
+          }
+          
+          return true;
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+
+  // Property: Media file response includes hotnessScore
+  it("should include hotnessScore in media file response", async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.integer({ min: 1, max: 20 }), // limit
+        async (limit) => {
+          const trendingItems = await getTrendingMedia(limit);
+          const popularItems = await getPopularMedia("all", limit);
+          const hotItems = await getHotMedia(limit);
+          
+          const allItems = [...trendingItems, ...popularItems, ...hotItems];
+          
+          for (const item of allItems) {
+            // hotnessScore should be present and numeric
+            expect(typeof item.hotnessScore).toBe("number");
+            expect(Number.isInteger(item.hotnessScore)).toBe(true);
+          }
+          
+          return true;
+        }
+      ),
+      { numRuns: 100 }
+    );
+  });
+});

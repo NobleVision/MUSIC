@@ -245,29 +245,29 @@ This implementation plan breaks down the social engagement feature into discrete
     - Add tab navigation for trending/popular/hot
     - _Requirements: 5.2, 5.3_
 
-- [-] 11. Checkpoint - Verify frontend integration
+- [x] 11. Checkpoint - Verify frontend integration
   - Test voting flow end-to-end
   - Test activity feed real-time updates
   - Test trending/popular lists
   - Verify mobile responsiveness
   - Ask the user if questions arise
 
-- [ ] 12. Final integration and polish
-  - [ ] 12.1 Add engagement metrics to media list queries
+- [x] 12. Final integration and polish
+  - [x] 12.1 Add engagement metrics to media list queries
     - Update media.list to include engagement counts
     - Update media.getById to include engagement counts
     - _Requirements: 2.3, 3.3, 4.3_
 
-  - [ ] 12.2 Write property test for engagement metrics in response
+  - [x] 12.2 Write property test for engagement metrics in response
     - **Property 5: Engagement Metrics in Media File Response**
     - **Validates: Requirements 2.3, 3.3, 4.3**
 
-  - [ ] 12.3 Add activity feed items for existing actions
+  - [x] 12.3 Add activity feed items for existing actions
     - Add activity feed item on media upload
     - Add activity feed item on comment creation
     - _Requirements: 6.3, 6.4_
 
-- [ ] 13. Final checkpoint
+- [x] 13. Final checkpoint
   - Run full test suite
   - Verify all engagement features work together
   - Ensure all tests pass
