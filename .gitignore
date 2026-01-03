@@ -1,7 +1,8 @@
 # Dependencies
 **/node_modules
 .pnpm-store/
-
+node_modules/
+.git/
 # Build outputs
 dist/
 build/
