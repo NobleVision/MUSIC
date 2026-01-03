@@ -459,7 +459,17 @@ export default function VideoBackground({
             muted
             playsInline
             loop={false}
-            onError={() => setError(true)}
+            onError={(e) => {
+              console.warn(`Video failed to load: ${currentVideo}`, e);
+              // Error handler in useEffect will handle this
+            }}
+            onLoadStart={() => {
+              // Reset error state when a new video starts loading
+              if (error) {
+                setError(false);
+                retryCountRef.current = 0;
+              }
+            }}
           />
           {/* Overlay for better text readability */}
           <div className="absolute inset-0 bg-black/30" />
