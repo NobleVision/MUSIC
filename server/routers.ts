@@ -8,6 +8,27 @@ import { sdk } from "./_core/sdk";
 import * as db from "./db";
 import { hashPassword, verifyPassword, generateToken, generateApiKey, hashApiKey } from "./auth";
 import { storagePut, generateUploadSignature } from "./storage";
+import {
+  getClientIpHash,
+  rateLimiter,
+  upsertVote,
+  removeVote,
+  getVoteByIpAndMedia,
+  getVoteCounts,
+  createPlayLog,
+  createDownloadLog,
+  createViewLog,
+  incrementPlayCount,
+  incrementDownloadCount,
+  incrementViewCount,
+  createActivityFeedItem,
+  getRecentActivity,
+  getTrendingMedia,
+  getPopularMedia,
+  getHotMedia,
+  type VoteType,
+  type TimePeriod,
+} from "./engagement";
 
 // Admin credentials (set these in Vercel Project Settings > Environment Variables)
 // Defaults are for convenience only; change them in production.
@@ -591,6 +612,304 @@ export const appRouter = router({
         
         // Return the plain API key only once
         return { success: true, apiKey };
+      }),
+  }),
+
+  // Engagement features (voting, analytics, trending)
+  engagement: router({
+    // Voting endpoints
+    vote: publicProcedure
+      .input(z.object({
+        mediaFileId: z.number(),
+        voteType: z.enum(["up", "down"]),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const ipHash = ctx.req ? getClientIpHash(ctx.req) : "unknown";
+        
+        // Check rate limit
+        const rateCheck = rateLimiter.check(ipHash, "vote");
+        if (!rateCheck.allowed) {
+          const retryAfter = Math.ceil((rateCheck.resetTime - Date.now()) / 1000);
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: `Rate limit exceeded. Please try again in ${retryAfter} seconds.`,
+          });
+        }
+        
+        // Verify media file exists
+        const mediaFile = await db.getMediaFileById(input.mediaFileId);
+        if (!mediaFile) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Media file not found",
+          });
+        }
+        
+        // Record the vote
+        const result = await upsertVote(input.mediaFileId, ipHash, input.voteType as VoteType);
+        
+        if (!result.success) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: result.error || "Failed to record vote",
+          });
+        }
+        
+        // Add to activity feed
+        await createActivityFeedItem(
+          "vote",
+          input.mediaFileId,
+          mediaFile.title
+        );
+        
+        // Get updated counts
+        const counts = await getVoteCounts(input.mediaFileId);
+        
+        return {
+          success: true,
+          voteType: input.voteType,
+          previousVote: result.previousVote,
+          upvotes: counts.upvotes,
+          downvotes: counts.downvotes,
+        };
+      }),
+
+    removeVote: publicProcedure
+      .input(z.object({ mediaFileId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const ipHash = ctx.req ? getClientIpHash(ctx.req) : "unknown";
+        
+        const result = await removeVote(input.mediaFileId, ipHash);
+        
+        if (!result.success) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: result.error || "Failed to remove vote",
+          });
+        }
+        
+        // Get updated counts
+        const counts = await getVoteCounts(input.mediaFileId);
+        
+        return {
+          success: true,
+          previousVote: result.previousVote,
+          upvotes: counts.upvotes,
+          downvotes: counts.downvotes,
+        };
+      }),
+
+    getVoteStatus: publicProcedure
+      .input(z.object({ mediaFileId: z.number() }))
+      .query(async ({ input, ctx }) => {
+        const ipHash = ctx.req ? getClientIpHash(ctx.req) : "unknown";
+        
+        const vote = await getVoteByIpAndMedia(input.mediaFileId, ipHash);
+        
+        return {
+          currentVote: vote?.voteType as VoteType | null ?? null,
+        };
+      }),
+
+    getVoteCounts: publicProcedure
+      .input(z.object({ mediaFileId: z.number() }))
+      .query(async ({ input }) => {
+        return await getVoteCounts(input.mediaFileId);
+      }),
+
+    // Analytics tracking endpoints
+    recordPlay: publicProcedure
+      .input(z.object({
+        mediaFileId: z.number(),
+        playDuration: z.number().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const ipHash = ctx.req ? getClientIpHash(ctx.req) : "unknown";
+        
+        // Check rate limit
+        const rateCheck = rateLimiter.check(ipHash, "play");
+        if (!rateCheck.allowed) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Rate limit exceeded for play tracking",
+          });
+        }
+        
+        // Verify media file exists
+        const mediaFile = await db.getMediaFileById(input.mediaFileId);
+        if (!mediaFile) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Media file not found",
+          });
+        }
+        
+        // Create play log
+        const result = await createPlayLog(input.mediaFileId, ipHash, input.playDuration);
+        
+        if (!result.success) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: result.error || "Failed to record play",
+          });
+        }
+        
+        // Increment denormalized count
+        await incrementPlayCount(input.mediaFileId);
+        
+        // Add to activity feed
+        await createActivityFeedItem(
+          "play",
+          input.mediaFileId,
+          mediaFile.title,
+          ipHash
+        );
+        
+        return { success: true };
+      }),
+
+    recordDownload: publicProcedure
+      .input(z.object({ mediaFileId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const ipHash = ctx.req ? getClientIpHash(ctx.req) : "unknown";
+        
+        // Check rate limit
+        const rateCheck = rateLimiter.check(ipHash, "download");
+        if (!rateCheck.allowed) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Rate limit exceeded for download tracking",
+          });
+        }
+        
+        // Verify media file exists
+        const mediaFile = await db.getMediaFileById(input.mediaFileId);
+        if (!mediaFile) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Media file not found",
+          });
+        }
+        
+        // Create download log
+        const result = await createDownloadLog(input.mediaFileId, ipHash);
+        
+        if (!result.success) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: result.error || "Failed to record download",
+          });
+        }
+        
+        // Increment denormalized count
+        await incrementDownloadCount(input.mediaFileId);
+        
+        // Add to activity feed
+        await createActivityFeedItem(
+          "download",
+          input.mediaFileId,
+          mediaFile.title,
+          ipHash
+        );
+        
+        return { success: true };
+      }),
+
+    recordView: publicProcedure
+      .input(z.object({ mediaFileId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const ipHash = ctx.req ? getClientIpHash(ctx.req) : "unknown";
+        
+        // Check rate limit
+        const rateCheck = rateLimiter.check(ipHash, "view");
+        if (!rateCheck.allowed) {
+          throw new TRPCError({
+            code: "TOO_MANY_REQUESTS",
+            message: "Rate limit exceeded for view tracking",
+          });
+        }
+        
+        // Verify media file exists
+        const mediaFile = await db.getMediaFileById(input.mediaFileId);
+        if (!mediaFile) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Media file not found",
+          });
+        }
+        
+        // Create view log
+        const result = await createViewLog(input.mediaFileId, ipHash);
+        
+        if (!result.success) {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: result.error || "Failed to record view",
+          });
+        }
+        
+        // Increment denormalized count
+        await incrementViewCount(input.mediaFileId);
+        
+        return { success: true };
+      }),
+
+    getStats: publicProcedure
+      .input(z.object({ mediaFileId: z.number() }))
+      .query(async ({ input }) => {
+        const mediaFile = await db.getMediaFileById(input.mediaFileId);
+        if (!mediaFile) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Media file not found",
+          });
+        }
+        
+        const voteCounts = await getVoteCounts(input.mediaFileId);
+        
+        return {
+          playCount: mediaFile.playCount,
+          downloadCount: mediaFile.downloadCount,
+          viewCount: mediaFile.viewCount,
+          upvotes: voteCounts.upvotes,
+          downvotes: voteCounts.downvotes,
+          hotnessScore: mediaFile.hotnessScore,
+        };
+      }),
+
+    // Trending and popular endpoints
+    getTrending: publicProcedure
+      .input(z.object({
+        limit: z.number().min(1).max(50).default(10),
+      }))
+      .query(async ({ input }) => {
+        return await getTrendingMedia(input.limit);
+      }),
+
+    getPopular: publicProcedure
+      .input(z.object({
+        period: z.enum(["24h", "7d", "30d", "all"]).default("all"),
+        limit: z.number().min(1).max(50).default(10),
+      }))
+      .query(async ({ input }) => {
+        return await getPopularMedia(input.period as TimePeriod, input.limit);
+      }),
+
+    getHot: publicProcedure
+      .input(z.object({
+        limit: z.number().min(1).max(50).default(10),
+      }))
+      .query(async ({ input }) => {
+        return await getHotMedia(input.limit);
+      }),
+
+    // Activity feed endpoint
+    getRecentActivity: publicProcedure
+      .input(z.object({
+        limit: z.number().min(1).max(50).default(20),
+      }))
+      .query(async ({ input }) => {
+        return await getRecentActivity(input.limit);
       }),
   }),
 });
