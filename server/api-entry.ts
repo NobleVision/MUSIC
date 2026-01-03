@@ -2,11 +2,11 @@ import "dotenv/config";
 import express from "express";
 import type { Request, Response } from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { appRouter } from "../server/routers";
-import { createContext } from "../server/_core/context";
-import { registerOAuthRoutes } from "../server/_core/oauth";
-import { uploadRouter } from "../server/upload";
-import { externalApiRouter } from "../server/external-api";
+import { appRouter } from "./routers";
+import { createContext } from "./_core/context";
+import { registerOAuthRoutes } from "./_core/oauth";
+import { uploadRouter } from "./upload";
+import { externalApiRouter } from "./external-api";
 
 const app = express();
 
@@ -39,4 +39,3 @@ app.get("/api/health", (_req: Request, res: Response) => {
 
 // Export the Express app for Vercel serverless
 export default app;
-
