@@ -1,3 +1,6 @@
+// Load dotenv only in non-Vercel environments (Vercel provides env vars automatically)
+// dotenv will be bundled by esbuild (not externalized), making it available at runtime
+// In Vercel, this import will be available but won't load a .env file (none exists)
 import "dotenv/config";
 import express from "express";
 import type { Request, Response } from "express";
