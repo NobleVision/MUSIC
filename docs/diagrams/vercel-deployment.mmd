@@ -1,0 +1,28 @@
+graph TB
+    subgraph "GitHub Repository"
+        SRC[Source Code]
+    end
+
+    subgraph "Vercel Build"
+        BUILD[pnpm run build]
+        VITE[Vite Build → dist/public/]
+        ESB[esbuild → dist/index.js]
+    end
+
+    subgraph "Vercel Deployment"
+        CDN[CDN Edge Static Files]
+        FN[Serverless Functions api/index.ts]
+    end
+
+    subgraph "Routing"
+        R1["/api/*" → Serverless]
+        R2["/*" → index.html]
+    end
+
+    SRC -->|Push| BUILD
+    BUILD --> VITE
+    BUILD --> ESB
+    VITE --> CDN
+    FN --> R1
+    CDN --> R2
+

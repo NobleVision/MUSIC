@@ -1,0 +1,32 @@
+graph TB
+    subgraph "Client Browser"
+        UI[React Frontend]
+        TQ[TanStack Query]
+    end
+
+    subgraph "Vercel Edge"
+        SF[Static Files<br/>dist/public]
+        API[Serverless Functions<br/>api/index.ts]
+    end
+
+    subgraph "Backend Services"
+        TRPC[tRPC Router]
+        EXPRESS[Express Middleware]
+        AUTH[Auth Module]
+    end
+
+    subgraph "External Services"
+        DB[(PostgreSQL<br/>Database)]
+        CLOUD[Cloudinary<br/>Media Storage]
+    end
+
+    UI --> TQ
+    TQ -->|tRPC Calls| API
+    UI -->|Static Assets| SF
+    API --> EXPRESS
+    EXPRESS --> TRPC
+    TRPC --> AUTH
+    AUTH --> DB
+    TRPC --> DB
+    TRPC --> CLOUD
+

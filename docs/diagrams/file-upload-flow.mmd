@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant U as User
+    participant C as Client
+    participant A as API Server
+    participant CL as Cloudinary
+    participant DB as Database
+
+    U->>C: Select file + metadata
+    C->>C: Validate file type/size
+    C->>A: POST /api/upload (multipart/form-data)
+    A->>A: Multer processes file
+    A->>CL: Upload to Cloudinary
+    CL-->>A: Return URL + metadata
+    A->>DB: Create media_files record
+    DB-->>A: Record created
+    A-->>C: Success + file data
+    C->>C: Update UI
+    C-->>U: Show uploaded file
+

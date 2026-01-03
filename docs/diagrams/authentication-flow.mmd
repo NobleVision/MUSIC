@@ -1,0 +1,20 @@
+sequenceDiagram
+    participant U as User
+    participant C as Client App
+    participant A as API Server
+    participant DB as Database
+
+    U->>C: Navigate to /login
+    C->>U: Show login form
+    U->>C: Enter credentials (admin/glunet)
+    C->>A: POST /api/trpc/auth.adminLogin
+    A->>A: Verify credentials
+    A->>DB: Get/Create user record
+    DB-->>A: User data
+    A->>A: Generate JWT token
+    A-->>C: Set session cookie
+    C->>C: Redirect to dashboard
+    C->>A: Subsequent requests with cookie
+    A->>A: Validate JWT
+    A-->>C: Authorized response
+

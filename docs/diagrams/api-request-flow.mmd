@@ -1,0 +1,30 @@
+flowchart LR
+    subgraph "Client"
+        A[React Component]
+        B[tRPC Client]
+    end
+
+    subgraph "Network"
+        C[HTTP Request]
+    end
+
+    subgraph "Server"
+        D[Express Server]
+        E[tRPC Middleware]
+        F[Context Creator]
+        G[Router Handler]
+        H[Database Query]
+    end
+
+    A -->|useQuery/useMutation| B
+    B -->|Serialize| C
+    C -->|/api/trpc/*| D
+    D --> E
+    E --> F
+    F -->|Auth Check| G
+    G --> H
+    H -->|Response| G
+    G -->|Serialize| C
+    C --> B
+    B --> A
+
