@@ -52,7 +52,8 @@ async function buildVercel() {
       platform: "node",
       format: "cjs", // Use CommonJS to be compatible with Express
       target: "node20",
-      outfile: resolve(projectRoot, ".vercel/output/functions/api/index.func/index.js"),
+      // Use .cjs extension to ensure CommonJS is recognized
+      outfile: resolve(projectRoot, ".vercel/output/functions/api/index.func/index.cjs"),
       external,
       alias,
       define: {
