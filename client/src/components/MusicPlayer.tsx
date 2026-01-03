@@ -1,7 +1,8 @@
 import { useMusicPlayer } from "@/contexts/MusicPlayerContext";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Play, Pause, Square, Volume2, VolumeX, Music, X, Loader2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Play, Pause, Square, Volume2, VolumeX, Music, X, Loader2, MonitorPlay, MonitorOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function formatTime(seconds: number): string {
@@ -23,6 +24,8 @@ export default function MusicPlayer() {
     stop,
     setVolume,
     seek,
+    videoBackground,
+    toggleVideoBackground,
   } = useMusicPlayer();
 
   // Don't render if no track is loaded
@@ -131,6 +134,32 @@ export default function MusicPlayer() {
               className="w-20"
             />
           </div>
+
+          {/* Video Background Toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleVideoBackground}
+                className={cn(
+                  "h-8 w-8 transition-colors",
+                  videoBackground.enabled
+                    ? "text-purple-500 hover:text-purple-600"
+                    : "text-gray-400 hover:text-gray-600"
+                )}
+              >
+                {videoBackground.enabled ? (
+                  <MonitorPlay className="h-4 w-4" />
+                ) : (
+                  <MonitorOff className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{videoBackground.enabled ? "Disable" : "Enable"} background video</p>
+            </TooltipContent>
+          </Tooltip>
 
           {/* Close Button */}
           <Button

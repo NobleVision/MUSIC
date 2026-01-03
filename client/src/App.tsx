@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { MusicPlayerProvider } from "./contexts/MusicPlayerContext";
 import MusicPlayer from "./components/MusicPlayer";
+import VideoBackgroundOverlay from "./components/VideoBackgroundOverlay";
 import { Loader2 } from "lucide-react";
 
 // Pages
@@ -81,6 +82,7 @@ function App() {
         <MusicPlayerProvider>
           <TooltipProvider>
             <Toaster />
+            <VideoBackgroundOverlay />
             <Router />
             <MusicPlayer />
           </TooltipProvider>
