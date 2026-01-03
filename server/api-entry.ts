@@ -2,7 +2,7 @@
 // For local development, dotenv is loaded separately in server/_core/index.ts
 // This avoids bundling issues with dotenv's CommonJS require() in ESM
 import express from "express";
-import type { Request, Response } from "express";
+import type { Request, Response, NextFunction } from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "./routers";
 import { createContext } from "./_core/context";
@@ -11,6 +11,26 @@ import { uploadRouter } from "./upload";
 import { externalApiRouter } from "./external-api";
 
 const app = express();
+
+// CORS middleware for same-origin and cross-origin requests
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const origin = req.headers.origin;
+
+  // Allow same-origin requests and requests from Vercel preview URLs
+  if (origin) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key");
+
+  // Handle preflight requests
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  next();
+});
 
 // Configure body parser with larger size limit for file uploads
 app.use(express.json({ limit: "50mb" }));
