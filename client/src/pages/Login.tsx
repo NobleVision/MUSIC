@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Music } from "lucide-react";
+import VideoBackground from "@/components/VideoBackground";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -29,8 +30,13 @@ export default function Login() {
   };
   
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 relative">
+      <VideoBackground 
+        videoDirectory="/videos"
+        videoDuration={12}
+        transitionDuration={1.5}
+      />
+      <Card className="w-full max-w-md relative z-10 bg-background/95 backdrop-blur-sm shadow-2xl">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
