@@ -24,23 +24,12 @@ for (const [aliasPath, pathArray] of Object.entries(paths)) {
   alias[pattern] = target;
 }
 
-// External packages - only externalize production runtime dependencies
-// Local files and dotenv should be bundled
+// For Vercel Build Output API, we need to bundle everything into a single file
+// Only externalize packages that cannot be bundled (native modules, etc.)
+// Most packages can and should be bundled for serverless functions
 const external = [
-  "express",
-  "@trpc/server",
-  "@trpc/server/adapters/express",
-  "postgres",
-  "drizzle-orm",
-  "jose",
-  "cloudinary",
-  "multer",
-  "cookie",
-  "axios",
-  "zod",
-  "superjson",
-  "nanoid",
-  "streamdown",
+  // Only externalize if absolutely necessary (native bindings, etc.)
+  // Most packages should be bundled
 ];
 
 async function buildVercel() {
@@ -54,6 +43,7 @@ async function buildVercel() {
       outfile: resolve(projectRoot, ".vercel/output/functions/api/index.func/index.js"),
       external,
       alias,
+      // Don't use packages option - just bundle everything by default with bundle: true
       define: {
         "process.env.NODE_ENV": '"production"',
       },

@@ -42,6 +42,16 @@ fs.writeFileSync(
   JSON.stringify(funcConfig, null, 2)
 );
 
+// Create package.json for the function to indicate ES module
+const funcPackageJson = {
+  type: "module"
+};
+
+fs.writeFileSync(
+  path.join(funcDir, "package.json"),
+  JSON.stringify(funcPackageJson, null, 2)
+);
+
 // Copy static files from dist/public to .vercel/output/static
 const staticDir = path.join(outputDir, "static");
 fs.mkdirSync(staticDir, { recursive: true });
