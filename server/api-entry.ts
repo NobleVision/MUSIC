@@ -40,4 +40,6 @@ app.get("/api/health", (_req: Request, res: Response) => {
 });
 
 // Export the Express app for Vercel serverless
+// Both default and named exports for maximum compatibility
 export default app;
+export { app };

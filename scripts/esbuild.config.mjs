@@ -56,6 +56,16 @@ async function buildVercel() {
         js: `// Vercel Serverless Function - CommonJS format
 // Built by esbuild for Node.js 20.x runtime`,
       },
+      // Footer to ensure proper exports for Vercel
+      // Vercel expects module.exports to be the handler (Express app or function)
+      footer: {
+        js: `
+// Vercel compatibility: ensure module.exports is the Express app directly
+if (module.exports && module.exports.default) {
+  module.exports = module.exports.default;
+}
+`,
+      },
     });
 
     console.log("✓ Vercel function bundled successfully to index.cjs");
