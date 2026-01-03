@@ -10,6 +10,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { uploadRouter } from "../upload";
 import { externalApiRouter } from "../external-api";
+import { activityBroadcaster, startHeartbeat, stopHeartbeat } from "../sse";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -59,6 +60,35 @@ async function startServer() {
   app.use("/api", uploadRouter);
   // External API endpoints
   app.use("/api", externalApiRouter);
+  
+  // Server-Sent Events endpoint for real-time activity updates
+  app.get("/api/activity-stream", (req: Request, res: Response) => {
+    // Set SSE headers
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+    
+    // Flush headers immediately
+    res.flushHeaders();
+    
+    // Send initial connection message
+    res.write(": connected\n\n");
+    
+    // Add client to broadcaster
+    const clientId = activityBroadcaster.addClient(res);
+    
+    // Handle client disconnect
+    req.on("close", () => {
+      activityBroadcaster.removeClient(clientId);
+    });
+    
+    // Handle connection errors
+    req.on("error", () => {
+      activityBroadcaster.removeClient(clientId);
+    });
+  });
+  
   // tRPC API
   app.use(
     "/api/trpc",
@@ -83,7 +113,24 @@ async function startServer() {
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);
+    
+    // Start SSE heartbeat
+    startHeartbeat();
   });
+  
+  // Graceful shutdown handling
+  const gracefulShutdown = () => {
+    console.log("Shutting down gracefully...");
+    stopHeartbeat();
+    activityBroadcaster.disconnectAll();
+    server.close(() => {
+      console.log("Server closed");
+      process.exit(0);
+    });
+  };
+  
+  process.on("SIGTERM", gracefulShutdown);
+  process.on("SIGINT", gracefulShutdown);
 }
 
 startServer().catch(console.error);

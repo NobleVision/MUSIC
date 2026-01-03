@@ -29,6 +29,7 @@ import {
   type VoteType,
   type TimePeriod,
 } from "./engagement";
+import { broadcastActivity } from "./sse";
 
 // Admin credentials (set these in Vercel Project Settings > Environment Variables)
 // Defaults are for convenience only; change them in production.
@@ -391,6 +392,10 @@ export const appRouter = router({
           displayOrder: input.displayOrder || 0,
         });
         
+        // Broadcast upload event to SSE clients
+        // Note: We don't have the mediaFileId here, but we can still broadcast the title
+        broadcastActivity("upload", 0, input.title);
+        
         return { success: true };
       }),
     
@@ -569,12 +574,21 @@ export const appRouter = router({
         parentCommentId: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        // Get media file for title
+        const mediaFile = await db.getMediaFileById(input.mediaFileId);
+        
         await db.createComment({
           mediaFileId: input.mediaFileId,
           userId: ctx.user.id,
           content: input.content,
           parentCommentId: input.parentCommentId || null,
         });
+        
+        // Broadcast comment event to SSE clients
+        if (mediaFile) {
+          broadcastActivity("comment", input.mediaFileId, mediaFile.title);
+        }
+        
         return { success: true };
       }),
     
@@ -661,6 +675,9 @@ export const appRouter = router({
           input.mediaFileId,
           mediaFile.title
         );
+        
+        // Broadcast to SSE clients
+        broadcastActivity("vote", input.mediaFileId, mediaFile.title);
         
         // Get updated counts
         const counts = await getVoteCounts(input.mediaFileId);
@@ -765,6 +782,9 @@ export const appRouter = router({
           ipHash
         );
         
+        // Broadcast to SSE clients
+        broadcastActivity("play", input.mediaFileId, mediaFile.title);
+        
         return { success: true };
       }),
 
@@ -811,6 +831,9 @@ export const appRouter = router({
           mediaFile.title,
           ipHash
         );
+        
+        // Broadcast to SSE clients
+        broadcastActivity("download", input.mediaFileId, mediaFile.title);
         
         return { success: true };
       }),

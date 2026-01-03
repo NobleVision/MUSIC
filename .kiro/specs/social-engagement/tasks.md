@@ -131,7 +131,7 @@ This implementation plan breaks down the social engagement feature into discrete
   - Ensure all database operation tests pass
   - Ask the user if questions arise
 
-- [-] 6. tRPC engagement router
+- [x] 6. tRPC engagement router
   - [x] 6.1 Create engagement router structure
     - Add engagement router to appRouter
     - Set up rate limiting middleware integration
@@ -166,32 +166,32 @@ This implementation plan breaks down the social engagement feature into discrete
     - Test error responses for various failure cases
     - **Validates: Requirements 9.5**
 
-- [ ] 7. Server-Sent Events for real-time updates
-  - [ ] 7.1 Create SSE handler
+- [x] 7. Server-Sent Events for real-time updates
+  - [x] 7.1 Create SSE handler
     - Implement ActivityBroadcaster class
     - Add client connection management
     - Add broadcast method for activity events
     - _Requirements: 6.6_
 
-  - [ ] 7.2 Integrate SSE with Express
+  - [x] 7.2 Integrate SSE with Express
     - Add /api/activity-stream endpoint
     - Handle connection/disconnection
     - Set appropriate headers for SSE
     - _Requirements: 6.6_
 
-  - [ ] 7.3 Wire activity events to broadcaster
+  - [x] 7.3 Wire activity events to broadcaster
     - Broadcast on vote, play, download, upload, comment
     - Include media title and location in events
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
 
-- [ ] 8. Checkpoint - Verify backend
+- [x] 8. Checkpoint - Verify backend
   - Test all tRPC endpoints manually
   - Verify SSE connection works
   - Ensure all backend tests pass
   - Ask the user if questions arise
 
-- [ ] 9. Frontend components
-  - [ ] 9.1 Create VoteButtons component
+- [-] 9. Frontend components
+  - [-] 9.1 Create VoteButtons component
     - Implement thumbs up/down buttons with counts
     - Add loading and disabled states
     - Add vote count animation on change
