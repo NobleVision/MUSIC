@@ -1,6 +1,10 @@
 import { createContext, useContext, useState, useRef, useCallback, useEffect, ReactNode } from "react";
 import type { MediaFile } from "../../../drizzle/schema";
 
+// Play tracking threshold: 30 seconds or 50% of track duration
+const PLAY_THRESHOLD_SECONDS = 30;
+const PLAY_THRESHOLD_PERCENTAGE = 0.5;
+
 export interface Track {
   id: number;
   title: string;
@@ -55,6 +59,8 @@ export function useMusicPlayer() {
 
 interface MusicPlayerProviderProps {
   children: ReactNode;
+  /** Callback when a play should be recorded (threshold reached or track ended) */
+  onPlayRecorded?: (mediaFileId: number, playDuration: number) => void;
 }
 
 // Video files from public/videos
@@ -89,7 +95,7 @@ function getRandomVideo(): string {
   return `/videos/${VIDEO_FILES[randomIndex]}`;
 }
 
-export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
+export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerProviderProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [state, setState] = useState<MusicPlayerState>({
     currentTrack: null,
@@ -99,6 +105,11 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
     duration: 0,
     isLoading: false,
   });
+
+  // Track play recording state
+  const playStartTimeRef = useRef<number>(0);
+  const hasRecordedPlayRef = useRef<boolean>(false);
+  const currentTrackIdRef = useRef<number | null>(null);
 
   // Video background state - persisted to localStorage
   const [videoBackground, setVideoBackground] = useState<VideoBackgroundState>(() => {
@@ -132,7 +143,28 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
     audioRef.current = audio;
 
     const handleTimeUpdate = () => {
-      setState(s => ({ ...s, currentTime: audio.currentTime }));
+      const currentTime = audio.currentTime;
+      const duration = audio.duration || 0;
+      
+      setState(s => ({ ...s, currentTime }));
+      
+      // Check if we should record a play (threshold reached)
+      if (
+        !hasRecordedPlayRef.current &&
+        currentTrackIdRef.current !== null &&
+        duration > 0 &&
+        onPlayRecorded
+      ) {
+        const playDuration = currentTime - playStartTimeRef.current;
+        const thresholdReached =
+          playDuration >= PLAY_THRESHOLD_SECONDS ||
+          currentTime / duration >= PLAY_THRESHOLD_PERCENTAGE;
+        
+        if (thresholdReached) {
+          hasRecordedPlayRef.current = true;
+          onPlayRecorded(currentTrackIdRef.current, Math.round(playDuration));
+        }
+      }
     };
 
     const handleDurationChange = () => {
@@ -140,6 +172,17 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
     };
 
     const handleEnded = () => {
+      // Record play on track end if not already recorded
+      if (
+        !hasRecordedPlayRef.current &&
+        currentTrackIdRef.current !== null &&
+        onPlayRecorded
+      ) {
+        const playDuration = audio.currentTime - playStartTimeRef.current;
+        onPlayRecorded(currentTrackIdRef.current, Math.round(playDuration));
+        hasRecordedPlayRef.current = true;
+      }
+      
       setState(s => ({ ...s, isPlaying: false, currentTime: 0 }));
     };
 
@@ -172,11 +215,16 @@ export function MusicPlayerProvider({ children }: MusicPlayerProviderProps) {
       audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("error", handleError);
     };
-  }, []);
+  }, [onPlayRecorded]);
 
   const play = useCallback((track: Track) => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    // Reset play tracking for new track
+    playStartTimeRef.current = 0;
+    hasRecordedPlayRef.current = false;
+    currentTrackIdRef.current = track.id;
 
     audio.src = track.fileUrl;
     audio.load();

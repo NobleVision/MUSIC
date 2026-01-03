@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { FileAudio, FileVideo, MoreVertical, Trash2, Share2, Eye, Download, Play, Pause } from "lucide-react";
 import type { MediaFile } from "../../../drizzle/schema";
 import { useMusicPlayer } from "@/contexts/MusicPlayerContext";
+import VoteButtons from "./VoteButtons";
+import PopularityMetrics from "./PopularityMetrics";
 
 interface MediaFileCardProps {
   mediaFile: MediaFile;
@@ -60,6 +62,16 @@ export default function MediaFileCard({ mediaFile, onUpdate }: MediaFileCardProp
       id: mediaFile.id,
       isPubliclyShared: !mediaFile.isPubliclyShared,
     });
+  };
+
+  // Track downloads via engagement.recordDownload
+  const recordDownloadMutation = trpc.engagement.recordDownload.useMutation();
+
+  const handleDownload = () => {
+    // Record the download event
+    recordDownloadMutation.mutate({ mediaFileId: mediaFile.id });
+    // Open the file for download
+    window.open(mediaFile.fileUrl, '_blank');
   };
   
   const shareUrl = mediaFile.shareToken 
@@ -128,7 +140,7 @@ export default function MediaFileCard({ mediaFile, onUpdate }: MediaFileCardProp
                   <Eye className="w-4 h-4 mr-2" />
                   View
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => window.open(mediaFile.fileUrl, '_blank')}>
+                <DropdownMenuItem onClick={handleDownload}>
                   <Download className="w-4 h-4 mr-2" />
                   Download
                 </DropdownMenuItem>
@@ -149,11 +161,29 @@ export default function MediaFileCard({ mediaFile, onUpdate }: MediaFileCardProp
             {mediaFile.lyrics && (
               <p className="line-clamp-2">{mediaFile.lyrics}</p>
             )}
+            {/* Popularity metrics in compact mode */}
+            <PopularityMetrics
+              playCount={mediaFile.playCount}
+              downloadCount={mediaFile.downloadCount}
+              viewCount={mediaFile.viewCount}
+              upvotes={mediaFile.upvotes}
+              downvotes={mediaFile.downvotes}
+              compact
+            />
             <div className="flex items-center justify-between text-xs">
               <span>{mediaFile.mediaType === "audio" ? "Audio" : "Video"}</span>
               {mediaFile.isPubliclyShared && (
                 <span className="text-green-600 font-medium">Shared</span>
               )}
+            </div>
+            {/* Vote buttons */}
+            <div className="pt-2 border-t">
+              <VoteButtons
+                mediaFileId={mediaFile.id}
+                initialUpvotes={mediaFile.upvotes}
+                initialDownvotes={mediaFile.downvotes}
+                size="sm"
+              />
             </div>
           </div>
         </CardContent>

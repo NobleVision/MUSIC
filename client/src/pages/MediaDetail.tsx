@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { ArrowLeft, Star, Send, Tag, Plus, Loader2, FileAudio, FileVideo } from "lucide-react";
 import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
 import PageWrapper, { PageHeader } from "@/components/PageWrapper";
+import VoteButtons from "@/components/VoteButtons";
+import PopularityMetrics from "@/components/PopularityMetrics";
 
 export default function MediaDetail() {
   const [, params] = useRoute("/media/:id");
@@ -49,6 +51,15 @@ export default function MediaDetail() {
   );
   
   const { data: allTags } = trpc.tags.list.useQuery();
+
+  // Record view on page load
+  const recordViewMutation = trpc.engagement.recordView.useMutation();
+  
+  useEffect(() => {
+    if (mediaId > 0) {
+      recordViewMutation.mutate({ mediaFileId: mediaId });
+    }
+  }, [mediaId]);
   
   const rateMutation = trpc.ratings.rate.useMutation({
     onSuccess: () => {
@@ -244,10 +255,32 @@ export default function MediaDetail() {
                     </Button>
                   )}
                 </div>
+
+                {/* Vote Buttons */}
+                <div className="mt-4">
+                  <VoteButtons
+                    mediaFileId={mediaId}
+                    initialUpvotes={mediaFile.upvotes}
+                    initialDownvotes={mediaFile.downvotes}
+                    size="md"
+                  />
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent>
+            {/* Popularity Metrics - Full Display */}
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">Engagement Stats</h3>
+              <PopularityMetrics
+                playCount={mediaFile.playCount}
+                downloadCount={mediaFile.downloadCount}
+                viewCount={mediaFile.viewCount}
+                upvotes={mediaFile.upvotes}
+                downvotes={mediaFile.downvotes}
+              />
+            </div>
+
             {/* Media Player */}
             <div className="bg-gray-100 rounded-lg p-4 mb-4">
               {mediaFile.mediaType === "audio" ? (

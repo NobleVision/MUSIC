@@ -190,62 +190,62 @@ This implementation plan breaks down the social engagement feature into discrete
   - Ensure all backend tests pass
   - Ask the user if questions arise
 
-- [-] 9. Frontend components
-  - [-] 9.1 Create VoteButtons component
+- [x] 9. Frontend components
+  - [x] 9.1 Create VoteButtons component
     - Implement thumbs up/down buttons with counts
     - Add loading and disabled states
     - Add vote count animation on change
     - Wire to engagement.vote mutation
     - _Requirements: 1.1, 1.2, 1.5, 7.3_
 
-  - [ ] 9.2 Create PopularityMetrics component
+  - [x] 9.2 Create PopularityMetrics component
     - Display play count, download count, view count
     - Display upvotes and downvotes
     - Support compact mode for cards
     - _Requirements: 2.3, 3.3, 4.3_
 
-  - [ ] 9.3 Create ActivityFeed component
+  - [x] 9.3 Create ActivityFeed component
     - Display recent activity items
     - Support collapsible/dismissible UI
     - Connect to SSE for real-time updates
     - Add loading state
     - _Requirements: 6.5, 7.1, 7.2, 7.4_
 
-  - [ ] 9.4 Create TrendingList component
+  - [x] 9.4 Create TrendingList component
     - Display trending/popular media files
     - Support period selector (24h, 7d, 30d, all)
     - Show rank numbers
     - _Requirements: 5.2, 5.3_
 
-- [ ] 10. Integrate components into existing pages
-  - [ ] 10.1 Update MediaFileCard component
+- [x] 10. Integrate components into existing pages
+  - [x] 10.1 Update MediaFileCard component
     - Add VoteButtons component
     - Add PopularityMetrics in compact mode
     - Track downloads via engagement.recordDownload
     - _Requirements: 1.1, 1.2, 2.3, 3.1, 3.3, 4.3_
 
-  - [ ] 10.2 Update MediaDetail page
+  - [x] 10.2 Update MediaDetail page
     - Add VoteButtons component
     - Add full PopularityMetrics display
     - Call engagement.recordView on page load
     - _Requirements: 1.1, 1.2, 4.1_
 
-  - [ ] 10.3 Update MusicPlayerContext
+  - [x] 10.3 Update MusicPlayerContext
     - Call engagement.recordPlay when playback completes or reaches threshold
     - Track play duration
     - _Requirements: 2.1_
 
-  - [ ] 10.4 Add ActivityFeed to Dashboard
+  - [x] 10.4 Add ActivityFeed to Dashboard
     - Add collapsible ActivityFeed panel at top
     - Persist collapsed state to localStorage
     - _Requirements: 6.5, 7.1, 7.2_
 
-  - [ ] 10.5 Create Trending/Popular section on Dashboard
+  - [x] 10.5 Create Trending/Popular section on Dashboard
     - Add TrendingList component
     - Add tab navigation for trending/popular/hot
     - _Requirements: 5.2, 5.3_
 
-- [ ] 11. Checkpoint - Verify frontend integration
+- [-] 11. Checkpoint - Verify frontend integration
   - Test voting flow end-to-end
   - Test activity feed real-time updates
   - Test trending/popular lists

@@ -8,6 +8,8 @@ import { MusicPlayerProvider } from "./contexts/MusicPlayerContext";
 import MusicPlayer from "./components/MusicPlayer";
 import VideoBackgroundOverlay from "./components/VideoBackgroundOverlay";
 import { Loader2 } from "lucide-react";
+import { trpc } from "@/lib/trpc";
+import { useCallback, ReactNode } from "react";
 
 // Pages
 import Login from "./pages/Login";
@@ -75,18 +77,36 @@ function Router() {
   );
 }
 
+/**
+ * Wrapper component that provides play tracking via engagement.recordPlay
+ * Requirements: 2.1 - Track play count when playback completes or reaches threshold
+ */
+function MusicPlayerWithEngagement({ children }: { children: ReactNode }) {
+  const recordPlayMutation = trpc.engagement.recordPlay.useMutation();
+
+  const handlePlayRecorded = useCallback((mediaFileId: number, playDuration: number) => {
+    recordPlayMutation.mutate({ mediaFileId, playDuration });
+  }, [recordPlayMutation]);
+
+  return (
+    <MusicPlayerProvider onPlayRecorded={handlePlayRecorded}>
+      {children}
+    </MusicPlayerProvider>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <MusicPlayerProvider>
+        <MusicPlayerWithEngagement>
           <TooltipProvider>
             <Toaster />
             <VideoBackgroundOverlay />
             <Router />
             <MusicPlayer />
           </TooltipProvider>
-        </MusicPlayerProvider>
+        </MusicPlayerWithEngagement>
       </ThemeProvider>
     </ErrorBoundary>
   );

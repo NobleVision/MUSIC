@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,10 @@ import { useLocation } from "wouter";
 import SectionCard from "@/components/SectionCard";
 import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
 import PageWrapper, { PageHeader } from "@/components/PageWrapper";
+import ActivityFeed from "@/components/ActivityFeed";
+import TrendingList from "@/components/TrendingList";
+
+const ACTIVITY_FEED_COLLAPSED_KEY = "activity-feed-collapsed";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -20,6 +24,17 @@ export default function Dashboard() {
   const [showNewSectionDialog, setShowNewSectionDialog] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
   const [newSectionDescription, setNewSectionDescription] = useState("");
+  
+  // Activity feed collapsed state - persisted to localStorage
+  const [activityFeedCollapsed, setActivityFeedCollapsed] = useState(() => {
+    const saved = localStorage.getItem(ACTIVITY_FEED_COLLAPSED_KEY);
+    return saved === "true";
+  });
+
+  // Persist collapsed state to localStorage
+  useEffect(() => {
+    localStorage.setItem(ACTIVITY_FEED_COLLAPSED_KEY, String(activityFeedCollapsed));
+  }, [activityFeedCollapsed]);
   
   const { data: sections, isLoading, refetch } = trpc.sections.list.useQuery();
   
@@ -89,6 +104,29 @@ export default function Dashboard() {
       
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* Activity Feed - Collapsible panel at top */}
+        <div className="mb-6">
+          <ActivityFeed
+            maxItems={15}
+            collapsible
+            defaultCollapsed={activityFeedCollapsed}
+            showHeader
+          />
+        </div>
+
+        {/* Trending/Popular/Hot Section */}
+        <div className="mb-6">
+          <TrendingList
+            defaultType="trending"
+            defaultPeriod="24h"
+            limit={10}
+            showRank
+            showTypeSelector
+            showPeriodSelector
+            onMediaClick={(mediaFileId) => setLocation(`/media/${mediaFileId}`)}
+          />
+        </div>
+
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">My Sections</h2>
