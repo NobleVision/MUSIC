@@ -24,34 +24,11 @@ for (const [aliasPath, pathArray] of Object.entries(paths)) {
   alias[pattern] = target;
 }
 
-// Externalize packages that should be installed by Vercel at deploy time
-// These will be required at runtime from node_modules
-const external = [
-  // Core server dependencies
-  "express",
-  "@trpc/server",
-  "@trpc/server/adapters/express",
-  // Database
-  "postgres",
-  "drizzle-orm",
-  "drizzle-orm/*",
-  // Authentication
-  "jose",
-  // Storage
-  "cloudinary",
-  // File uploads
-  "multer",
-  // Utilities
-  "cookie",
-  "axios",
-  "zod",
-  "superjson",
-  "nanoid",
-  "streamdown",
-  // Exclude dotenv - Vercel provides env vars automatically
-  "dotenv",
-  "dotenv/*",
-];
+// Bundle everything into a single CommonJS file.
+// Vercel Build Output API does NOT reliably ship node_modules alongside the function,
+// so any externalized dependency (like express) will be missing at runtime.
+// CommonJS output also avoids ESM + CJS dynamic-require issues.
+const external = [];
 
 async function buildVercel() {
   try {

@@ -31,10 +31,14 @@ fs.writeFileSync(
 const funcDir = path.join(outputDir, "functions/api/index.func");
 fs.mkdirSync(funcDir, { recursive: true });
 
+// Vercel function configuration
+// Using .cjs extension to ensure Node.js treats it as CommonJS
 const funcConfig = {
   runtime: "nodejs20.x",
-  handler: "index.cjs", // Use .cjs extension for CommonJS
-  launcherType: "Nodejs"
+  handler: "index.cjs",
+  launcherType: "Nodejs",
+  // Increase memory and timeout for API routes
+  maxDuration: 30,
 };
 
 fs.writeFileSync(
@@ -42,35 +46,21 @@ fs.writeFileSync(
   JSON.stringify(funcConfig, null, 2)
 );
 
-// Create package.json for the function with dependencies
-// Explicitly set type to commonjs (or omit it) to ensure CommonJS is used
-const rootPackageJson = JSON.parse(fs.readFileSync("package.json", "utf-8"));
+// Create a minimal package.json for the function.
+// The function bundle is self-contained (we bundle dependencies into index.cjs),
+// so we do not rely on installing node_modules at runtime.
 const funcPackageJson = {
   name: "vercel-function",
   version: "1.0.0",
-  // Omit "type" field to use CommonJS (default)
-  dependencies: {
-    // Only include the externalized dependencies
-    express: rootPackageJson.dependencies.express,
-    "@trpc/server": rootPackageJson.dependencies["@trpc/server"],
-    postgres: rootPackageJson.dependencies.postgres,
-    "drizzle-orm": rootPackageJson.dependencies["drizzle-orm"],
-    jose: rootPackageJson.dependencies.jose,
-    cloudinary: rootPackageJson.dependencies.cloudinary,
-    multer: rootPackageJson.dependencies.multer,
-    cookie: rootPackageJson.dependencies.cookie,
-    axios: rootPackageJson.dependencies.axios,
-    zod: rootPackageJson.dependencies.zod,
-    superjson: rootPackageJson.dependencies.superjson,
-    nanoid: rootPackageJson.dependencies.nanoid,
-    streamdown: rootPackageJson.dependencies.streamdown,
-  },
+  main: "index.cjs",
 };
 
 fs.writeFileSync(
   path.join(funcDir, "package.json"),
   JSON.stringify(funcPackageJson, null, 2)
 );
+
+console.log("✓ Function package.json created");
 
 // Copy static files from dist/public to .vercel/output/static
 const staticDir = path.join(outputDir, "static");
@@ -98,24 +88,9 @@ function copyDir(src, dest) {
 
 copyDir("dist/public", staticDir);
 
-// For Vercel Build Output API with externalized dependencies, we need node_modules
-// The simplest approach: copy the entire node_modules directory
-// This is large but ensures all dependencies are available
-const funcNodeModules = path.join(funcDir, "node_modules");
-
-if (fs.existsSync("node_modules")) {
-  console.log("Copying node_modules to function directory (this may take a while)...");
-  try {
-    // Use a more efficient copy method for large directories
-    // For pnpm, we need to preserve symlinks or copy the actual files
-    copyDir("node_modules", funcNodeModules);
-    console.log("✓ node_modules copied successfully");
-  } catch (error) {
-    console.warn(`⚠ Error copying node_modules: ${error.message}`);
-    console.warn("⚠ Function may not have access to externalized dependencies");
-  }
-} else {
-  console.warn("⚠ node_modules not found - dependencies may not be available at runtime");
-}
+// Note: We do NOT copy node_modules here.
+// The function bundle is self-contained (index.cjs).
 
 console.log("✓ Vercel Build Output API structure created");
+console.log("  - Static files: .vercel/output/static/");
+console.log("  - Function: .vercel/output/functions/api/index.func/");
