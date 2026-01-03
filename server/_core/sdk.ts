@@ -168,10 +168,14 @@ class SDKServer {
     openId: string,
     options: { expiresInMs?: number; name?: string } = {}
   ): Promise<string> {
+    // Use ENV.appId if available, otherwise use a default for admin sessions
+    // This ensures the appId is never empty, which would fail verification
+    const appId = ENV.appId || "music-hosting-platform";
+
     return this.signSession(
       {
         openId,
-        appId: ENV.appId,
+        appId,
         name: options.name || "",
       },
       options
@@ -212,12 +216,17 @@ class SDKServer {
       });
       const { openId, appId, name } = payload as Record<string, unknown>;
 
-      if (
-        !isNonEmptyString(openId) ||
-        !isNonEmptyString(appId) ||
-        !isNonEmptyString(name)
-      ) {
-        console.warn("[Auth] Session payload missing required fields");
+      // Detailed logging for debugging
+      const missingFields: string[] = [];
+      if (!isNonEmptyString(openId)) missingFields.push("openId");
+      if (!isNonEmptyString(appId)) missingFields.push("appId");
+      if (!isNonEmptyString(name)) missingFields.push("name");
+
+      if (missingFields.length > 0) {
+        console.warn("[Auth] Session payload missing required fields:", missingFields.join(", "),
+          "| Actual values - openId:", typeof openId, openId ? "present" : "empty",
+          "appId:", typeof appId, appId ? "present" : "empty",
+          "name:", typeof name, name ? "present" : "empty");
         return null;
       }
 
