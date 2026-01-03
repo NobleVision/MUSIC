@@ -24,12 +24,24 @@ for (const [aliasPath, pathArray] of Object.entries(paths)) {
   alias[pattern] = target;
 }
 
-// For Vercel Build Output API, we need to bundle everything into a single file
-// dotenv is not imported in api-entry.ts (Vercel provides env vars automatically)
-// Only externalize packages that cannot be bundled (native modules, etc.)
+// Externalize Express and its CommonJS dependencies
+// These use dynamic require() which doesn't work when bundled as ESM
+// We'll use CommonJS format for the output to be compatible with Express
 const external = [
-  // Only externalize if absolutely necessary (native bindings, etc.)
-  // Most packages should be bundled
+  "express",
+  "@trpc/server",
+  "@trpc/server/adapters/express",
+  "postgres",
+  "drizzle-orm",
+  "jose",
+  "cloudinary",
+  "multer",
+  "cookie",
+  "axios",
+  "zod",
+  "superjson",
+  "nanoid",
+  "streamdown",
 ];
 
 async function buildVercel() {
@@ -38,12 +50,11 @@ async function buildVercel() {
       entryPoints: [resolve(projectRoot, "server/api-entry.ts")],
       bundle: true,
       platform: "node",
-      format: "esm",
+      format: "cjs", // Use CommonJS to be compatible with Express
       target: "node20",
       outfile: resolve(projectRoot, ".vercel/output/functions/api/index.func/index.js"),
       external,
       alias,
-      // Don't use packages option - just bundle everything by default with bundle: true
       define: {
         "process.env.NODE_ENV": '"production"',
       },

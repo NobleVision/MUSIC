@@ -42,10 +42,8 @@ fs.writeFileSync(
   JSON.stringify(funcConfig, null, 2)
 );
 
-// Create package.json for the function to indicate ES module
-const funcPackageJson = {
-  type: "module"
-};
+// Create package.json for the function (CommonJS, no type: "module")
+const funcPackageJson = {};
 
 fs.writeFileSync(
   path.join(funcDir, "package.json"),
@@ -57,6 +55,10 @@ const staticDir = path.join(outputDir, "static");
 fs.mkdirSync(staticDir, { recursive: true });
 
 function copyDir(src, dest) {
+  if (!fs.existsSync(src)) {
+    console.warn(`Source directory does not exist: ${src}`);
+    return;
+  }
   fs.mkdirSync(dest, { recursive: true });
   const entries = fs.readdirSync(src, { withFileTypes: true });
   
