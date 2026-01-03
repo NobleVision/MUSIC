@@ -126,6 +126,13 @@ A comprehensive media management and distribution platform with secure admin acc
    
    # JWT Secret (generate a random string)
    JWT_SECRET=your-secure-random-string-here
+
+   # Static admin login (local + Vercel)
+   # Default credentials if you don't override:
+   #   username: admin
+   #   password: admin
+   ADMIN_USERNAME=admin
+   ADMIN_PASSWORD=admin
    
    # AWS S3 Storage (if running locally)
    AWS_ACCESS_KEY_ID=your-access-key
@@ -157,7 +164,7 @@ A comprehensive media management and distribution platform with secure admin acc
    
    Login with:
    - Username: `admin`
-   - Password: `glunet`
+   - Password: `admin` (or whatever you set in `ADMIN_PASSWORD`)
 
 ### Building for Production
 

@@ -12,6 +12,11 @@ import { SignJWT } from "jose";
 // JWT secret from environment
 const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret-key");
 
+// Admin credentials (set these in Vercel Project Settings > Environment Variables)
+// Defaults are for convenience only; change them in production.
+const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "admin";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "admin";
+
 async function createJWT(userId: number, isAdmin: boolean): Promise<string> {
   return await new SignJWT({ userId, isAdmin })
     .setProtectedHeader({ alg: "HS256" })
@@ -41,21 +46,17 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const { username, password } = input;
         
-        // Hardcoded admin credentials for local development
-        const HARDCODED_ADMIN_USERNAME = "admin";
-        const HARDCODED_ADMIN_PASSWORD = "glunet";
-        
-        // First, check hardcoded credentials (works without database)
-        if (username === HARDCODED_ADMIN_USERNAME && password === HARDCODED_ADMIN_PASSWORD) {
+        // First, check env-based credentials (works without database)
+        if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
           // Valid hardcoded credentials - proceed with login
         } else {
           // Check database credentials as fallback
           let adminCred = await db.getAdminCredentialByUsername(username);
-          if (!adminCred && username === "admin") {
+          if (!adminCred && username === ADMIN_USERNAME) {
             // Initialize default admin on first login attempt
             try {
-              const passwordHash = hashPassword("glunet");
-              await db.createAdminCredential("admin", passwordHash);
+              const passwordHash = hashPassword(ADMIN_PASSWORD);
+              await db.createAdminCredential(ADMIN_USERNAME, passwordHash);
               adminCred = await db.getAdminCredentialByUsername(username);
             } catch (e) {
               // Database not available, and hardcoded creds didn't match
