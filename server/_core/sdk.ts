@@ -270,21 +270,43 @@ class SDKServer {
     const signedInAt = new Date();
     let user = await db.getUserByOpenId(sessionUserId);
 
-    // If user not in DB, sync from OAuth server automatically
+    // Check if this is an admin user (created via adminLogin, not OAuth)
+    const isAdminUser = sessionUserId.startsWith("admin::");
+
+    // If user not in DB, handle based on user type
     if (!user) {
-      try {
-        const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
-        await db.upsertUser({
-          openId: userInfo.openId,
-          name: userInfo.name || null,
-          email: userInfo.email ?? null,
-          loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-          lastSignedIn: signedInAt,
-        });
-        user = await db.getUserByOpenId(userInfo.openId);
-      } catch (error) {
-        console.error("[Auth] Failed to sync user from OAuth:", error);
-        throw ForbiddenError("Failed to sync user info");
+      if (isAdminUser) {
+        // Admin users are created during login, create them now if missing
+        const adminName = session.name || sessionUserId.replace("admin::", "");
+        try {
+          await db.upsertUser({
+            openId: sessionUserId,
+            name: adminName,
+            role: "admin",
+            loginMethod: "password",
+            lastSignedIn: signedInAt,
+          });
+          user = await db.getUserByOpenId(sessionUserId);
+        } catch (error) {
+          console.error("[Auth] Failed to create admin user:", error);
+          throw ForbiddenError("Failed to create admin user");
+        }
+      } else {
+        // Regular OAuth users - sync from OAuth server
+        try {
+          const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
+          await db.upsertUser({
+            openId: userInfo.openId,
+            name: userInfo.name || null,
+            email: userInfo.email ?? null,
+            loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+            lastSignedIn: signedInAt,
+          });
+          user = await db.getUserByOpenId(userInfo.openId);
+        } catch (error) {
+          console.error("[Auth] Failed to sync user from OAuth:", error);
+          throw ForbiddenError("Failed to sync user info");
+        }
       }
     }
 

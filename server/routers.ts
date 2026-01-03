@@ -4,26 +4,18 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { sdk } from "./_core/sdk";
 import * as db from "./db";
 import { hashPassword, verifyPassword, generateToken, generateApiKey, hashApiKey } from "./auth";
 import { storagePut } from "./storage";
-import { SignJWT } from "jose";
-
-// JWT secret from environment
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret-key");
 
 // Admin credentials (set these in Vercel Project Settings > Environment Variables)
 // Defaults are for convenience only; change them in production.
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME ?? "admin";
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD ?? "admin";
 
-async function createJWT(userId: number, isAdmin: boolean): Promise<string> {
-  return await new SignJWT({ userId, isAdmin })
-    .setProtectedHeader({ alg: "HS256" })
-    .setIssuedAt()
-    .setExpirationTime("7d")
-    .sign(JWT_SECRET);
-}
+// Special openId prefix for admin users (not from OAuth)
+const ADMIN_OPENID_PREFIX = "admin::";
 
 export const appRouter = router({
   system: systemRouter,
@@ -45,10 +37,11 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         const { username, password } = input;
-        
+
         // First, check env-based credentials (works without database)
+        let isValidCredentials = false;
         if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-          // Valid hardcoded credentials - proceed with login
+          isValidCredentials = true;
         } else {
           // Check database credentials as fallback
           let adminCred = await db.getAdminCredentialByUsername(username);
@@ -62,25 +55,48 @@ export const appRouter = router({
               // Database not available, and hardcoded creds didn't match
             }
           }
-          
-          if (!adminCred || !verifyPassword(password, adminCred.passwordHash)) {
-            throw new TRPCError({
-              code: "UNAUTHORIZED",
-              message: "Invalid username or password",
-            });
+
+          if (adminCred && verifyPassword(password, adminCred.passwordHash)) {
+            isValidCredentials = true;
           }
         }
-        
-        // Create a JWT token
-        const token = await createJWT(-1, true); // -1 for admin user
-        
+
+        if (!isValidCredentials) {
+          throw new TRPCError({
+            code: "UNAUTHORIZED",
+            message: "Invalid username or password",
+          });
+        }
+
+        // Create admin openId (unique per username)
+        const adminOpenId = `${ADMIN_OPENID_PREFIX}${username}`;
+
+        // Ensure admin user exists in database with admin role
+        try {
+          await db.upsertUser({
+            openId: adminOpenId,
+            name: username,
+            role: "admin",
+            lastSignedIn: new Date(),
+          });
+        } catch (e) {
+          // Database might not be available, but we can still create session
+          console.warn("[Auth] Could not upsert admin user to database:", e);
+        }
+
+        // Create a session token using the SDK (uses correct JWT format with openId, appId, name)
+        const token = await sdk.createSessionToken(adminOpenId, {
+          name: username,
+          expiresInMs: 7 * 24 * 60 * 60 * 1000, // 7 days
+        });
+
         // Set cookie
         const cookieOptions = getSessionCookieOptions(ctx.req);
         ctx.res.cookie(COOKIE_NAME, token, {
           ...cookieOptions,
           maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         });
-        
+
         return { success: true, isAdmin: true };
       }),
   }),
