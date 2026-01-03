@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Plus, Upload, Loader2, FileAudio, FileVideo, Shuffle } from "lucide-react";
 import MediaFileCard from "@/components/MediaFileCard";
 import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
+import PageWrapper, { PageHeader } from "@/components/PageWrapper";
 import { uploadToCloudinary } from "@/lib/storage";
 import { useMusicPlayer } from "@/contexts/MusicPlayerContext";
 
@@ -175,9 +176,9 @@ export default function CategoryView() {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+    <PageWrapper>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+      <PageHeader>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
@@ -199,7 +200,7 @@ export default function CategoryView() {
             </Button>
           </div>
         </div>
-      </header>
+      </PageHeader>
       
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
@@ -342,6 +343,6 @@ export default function CategoryView() {
       </Dialog>
 
       <MusicPlayerSpacer />
-    </div>
+    </PageWrapper>
   );
 }

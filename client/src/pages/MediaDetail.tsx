@@ -10,6 +10,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { ArrowLeft, Star, Send, Tag, Plus, Loader2, FileAudio, FileVideo } from "lucide-react";
 import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
+import PageWrapper, { PageHeader } from "@/components/PageWrapper";
 
 export default function MediaDetail() {
   const [, params] = useRoute("/media/:id");
@@ -145,15 +146,15 @@ export default function MediaDetail() {
   const topLevelComments = comments?.filter(c => !c.parentCommentId) || [];
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+    <PageWrapper>
+      <PageHeader>
         <div className="container mx-auto px-4 py-4">
           <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </Button>
         </div>
-      </header>
+      </PageHeader>
       
       <main className="container max-w-5xl mx-auto px-4 py-8 space-y-6">
         {/* Media Info Card */}
@@ -362,6 +363,6 @@ export default function MediaDetail() {
       </main>
 
       <MusicPlayerSpacer />
-    </div>
+    </PageWrapper>
   );
 }

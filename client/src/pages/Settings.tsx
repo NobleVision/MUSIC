@@ -8,6 +8,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Copy, Key, Loader2 } from "lucide-react";
+import PageWrapper, { PageHeader } from "@/components/PageWrapper";
+import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
 
 export default function Settings() {
   const [, setLocation] = useLocation();
@@ -57,15 +59,15 @@ export default function Settings() {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+    <PageWrapper>
+      <PageHeader>
         <div className="container mx-auto px-4 py-4">
           <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Dashboard
           </Button>
         </div>
-      </header>
+      </PageHeader>
       
       <main className="container max-w-4xl mx-auto px-4 py-8 space-y-6">
         <div>
@@ -219,6 +221,8 @@ export default function Settings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+
+      <MusicPlayerSpacer />
+    </PageWrapper>
   );
 }

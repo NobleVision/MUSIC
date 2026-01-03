@@ -8,19 +8,34 @@ import { useMusicPlayer } from "@/contexts/MusicPlayerContext";
  * - Dark overlay for better text contrast
  * - Respects prefers-reduced-motion
  * - Persists across page navigations
+ *
+ * Uses z-index 5 to render above the page background but below content (z-10+)
  */
 export default function VideoBackgroundOverlay() {
   const { shouldShowVideoBackground, videoBackground, isPlaying } = useMusicPlayer();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  
+
+  // Debug logging
+  useEffect(() => {
+    console.log("[VideoBackground] State:", {
+      shouldShowVideoBackground,
+      enabled: videoBackground.enabled,
+      currentVideoUrl: videoBackground.currentVideoUrl,
+      isPlaying,
+      isVideoLoaded,
+      hasError,
+    });
+  }, [shouldShowVideoBackground, videoBackground, isPlaying, isVideoLoaded, hasError]);
+
   // Handle video playback based on music playing state
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    
+
     if (isPlaying && shouldShowVideoBackground) {
+      console.log("[VideoBackground] Attempting to play video:", videoBackground.currentVideoUrl);
       video.play().catch(err => {
         console.warn("[VideoBackground] Failed to play video:", err);
         setHasError(true);
@@ -28,19 +43,19 @@ export default function VideoBackgroundOverlay() {
     } else {
       video.pause();
     }
-  }, [isPlaying, shouldShowVideoBackground]);
-  
+  }, [isPlaying, shouldShowVideoBackground, videoBackground.currentVideoUrl]);
+
   // Reset error state when video URL changes
   useEffect(() => {
     setHasError(false);
     setIsVideoLoaded(false);
   }, [videoBackground.currentVideoUrl]);
-  
+
   // Don't render if shouldn't show or has error
   if (!shouldShowVideoBackground || hasError || !videoBackground.currentVideoUrl) {
     return null;
   }
-  
+
   return (
     <AnimatePresence>
       {shouldShowVideoBackground && (
@@ -49,44 +64,46 @@ export default function VideoBackgroundOverlay() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 1.5, ease: "easeInOut" }}
-          className="fixed inset-0 overflow-hidden pointer-events-none"
-          style={{ zIndex: -1 }}
+          className="fixed inset-0 overflow-hidden pointer-events-none z-[5]"
           aria-hidden="true"
         >
-          {/* Video element */}
+          {/* Video element - higher opacity for visibility */}
           <video
             ref={videoRef}
             src={videoBackground.currentVideoUrl}
             className="absolute inset-0 w-full h-full object-cover"
-            style={{ 
-              opacity: isVideoLoaded ? 0.25 : 0,
+            style={{
+              opacity: isVideoLoaded ? 0.35 : 0,
               transition: "opacity 1s ease-in-out",
             }}
             autoPlay
             loop
             muted
             playsInline
-            onLoadedData={() => setIsVideoLoaded(true)}
-            onError={() => {
-              console.warn("[VideoBackground] Video failed to load:", videoBackground.currentVideoUrl);
+            onLoadedData={() => {
+              console.log("[VideoBackground] Video loaded successfully");
+              setIsVideoLoaded(true);
+            }}
+            onError={(e) => {
+              console.warn("[VideoBackground] Video failed to load:", videoBackground.currentVideoUrl, e);
               setHasError(true);
             }}
           />
-          
+
           {/* Dark overlay for text contrast */}
-          <div 
-            className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/50"
-            style={{ 
+          <div
+            className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/40 to-black/60"
+            style={{
               opacity: isVideoLoaded ? 1 : 0,
               transition: "opacity 1s ease-in-out",
             }}
           />
-          
+
           {/* Additional vignette effect for edges */}
-          <div 
+          <div
             className="absolute inset-0"
             style={{
-              background: "radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.3) 100%)",
+              background: "radial-gradient(ellipse at center, transparent 0%, rgba(0,0,0,0.4) 100%)",
               opacity: isVideoLoaded ? 1 : 0,
               transition: "opacity 1s ease-in-out",
             }}

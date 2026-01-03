@@ -12,6 +12,7 @@ import { Plus, FolderOpen, Music, LogOut, Settings, Loader2 } from "lucide-react
 import { useLocation } from "wouter";
 import SectionCard from "@/components/SectionCard";
 import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
+import PageWrapper, { PageHeader } from "@/components/PageWrapper";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -60,9 +61,9 @@ export default function Dashboard() {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+    <PageWrapper>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+      <PageHeader>
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
@@ -84,7 +85,7 @@ export default function Dashboard() {
             </Button>
           </div>
         </div>
-      </header>
+      </PageHeader>
       
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
@@ -163,6 +164,6 @@ export default function Dashboard() {
       </Dialog>
 
       <MusicPlayerSpacer />
-    </div>
+    </PageWrapper>
   );
 }

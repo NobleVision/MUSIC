@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Plus, FolderOpen, Loader2, Music } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
 import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
+import PageWrapper, { PageHeader } from "@/components/PageWrapper";
 
 export default function SectionView() {
   const [, params] = useRoute("/section/:id");
@@ -64,9 +65,9 @@ export default function SectionView() {
   }
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
+    <PageWrapper>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+      <PageHeader>
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")}>
@@ -86,7 +87,7 @@ export default function SectionView() {
             </div>
           </div>
         </div>
-      </header>
+      </PageHeader>
       
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
@@ -165,6 +166,6 @@ export default function SectionView() {
       </Dialog>
 
       <MusicPlayerSpacer />
-    </div>
+    </PageWrapper>
   );
 }
