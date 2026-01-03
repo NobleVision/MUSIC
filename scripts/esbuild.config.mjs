@@ -25,8 +25,8 @@ for (const [aliasPath, pathArray] of Object.entries(paths)) {
 }
 
 // For Vercel Build Output API, we need to bundle everything into a single file
+// dotenv is not imported in api-entry.ts (Vercel provides env vars automatically)
 // Only externalize packages that cannot be bundled (native modules, etc.)
-// Most packages can and should be bundled for serverless functions
 const external = [
   // Only externalize if absolutely necessary (native bindings, etc.)
   // Most packages should be bundled

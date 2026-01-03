@@ -1,7 +1,6 @@
-// Load dotenv only in non-Vercel environments (Vercel provides env vars automatically)
-// dotenv will be bundled by esbuild (not externalized), making it available at runtime
-// In Vercel, this import will be available but won't load a .env file (none exists)
-import "dotenv/config";
+// Vercel provides environment variables automatically, so dotenv is not needed
+// For local development, dotenv is loaded separately in server/_core/index.ts
+// This avoids bundling issues with dotenv's CommonJS require() in ESM
 import express from "express";
 import type { Request, Response } from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
