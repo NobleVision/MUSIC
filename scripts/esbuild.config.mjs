@@ -24,36 +24,48 @@ for (const [aliasPath, pathArray] of Object.entries(paths)) {
   alias[pattern] = target;
 }
 
-// Externalize Express and its CommonJS dependencies
-// These use dynamic require() which doesn't work when bundled as ESM
-// We'll use CommonJS format for the output to be compatible with Express
+// Externalize packages that should be installed by Vercel at deploy time
+// These will be required at runtime from node_modules
 const external = [
+  // Core server dependencies
   "express",
   "@trpc/server",
   "@trpc/server/adapters/express",
+  // Database
   "postgres",
   "drizzle-orm",
+  "drizzle-orm/*",
+  // Authentication
   "jose",
+  // Storage
   "cloudinary",
+  // File uploads
   "multer",
+  // Utilities
   "cookie",
   "axios",
   "zod",
   "superjson",
   "nanoid",
   "streamdown",
+  // Exclude dotenv - Vercel provides env vars automatically
+  "dotenv",
+  "dotenv/*",
 ];
 
 async function buildVercel() {
   try {
+    // Ensure output directory exists
+    const funcDir = resolve(projectRoot, ".vercel/output/functions/api/index.func");
+
     await build({
       entryPoints: [resolve(projectRoot, "server/api-entry.ts")],
       bundle: true,
       platform: "node",
       format: "cjs", // Use CommonJS to be compatible with Express
       target: "node20",
-      // Use .cjs extension to ensure CommonJS is recognized
-      outfile: resolve(projectRoot, ".vercel/output/functions/api/index.func/index.cjs"),
+      // Use .cjs extension to ensure CommonJS is recognized by Node.js
+      outfile: resolve(funcDir, "index.cjs"),
       external,
       alias,
       define: {
@@ -62,9 +74,14 @@ async function buildVercel() {
       logLevel: "info",
       sourcemap: false,
       minify: false, // Keep readable for debugging
+      // Banner to ensure CommonJS compatibility
+      banner: {
+        js: `// Vercel Serverless Function - CommonJS format
+// Built by esbuild for Node.js 20.x runtime`,
+      },
     });
 
-    console.log("✓ Vercel function bundled successfully");
+    console.log("✓ Vercel function bundled successfully to index.cjs");
   } catch (error) {
     console.error("✗ Build failed:", error);
     process.exit(1);

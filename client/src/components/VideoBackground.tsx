@@ -120,11 +120,13 @@ export default function VideoBackground({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [failedVideos, setFailedVideos] = useState<Set<string>>(new Set());
   
   const currentVideoRef = useRef<HTMLVideoElement>(null);
   const nextVideoRef = useRef<HTMLVideoElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const preloadRef = useRef<HTMLVideoElement | null>(null);
+  const retryCountRef = useRef(0);
 
   // Check for reduced motion preference
   useEffect(() => {
@@ -139,13 +141,37 @@ export default function VideoBackground({
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
+  // Validate if a video file exists and is accessible
+  const validateVideo = useCallback(async (videoPath: string): Promise<boolean> => {
+    return new Promise((resolve) => {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      
+      const timeout = setTimeout(() => {
+        resolve(false);
+        video.src = "";
+      }, 3000); // 3 second timeout
+      
+      video.onloadedmetadata = () => {
+        clearTimeout(timeout);
+        resolve(true);
+        video.src = "";
+      };
+      
+      video.onerror = () => {
+        clearTimeout(timeout);
+        resolve(false);
+        video.src = "";
+      };
+      
+      video.src = videoPath;
+    });
+  }, []);
+
   // Discover available videos
   useEffect(() => {
     const discoverVideos = async () => {
       try {
-        // In a real app, you might want to fetch a list from an API
-        // For now, we'll use a hardcoded list based on the files we know exist
-        // In production, you could use a build-time script to generate this list
         const videoFiles = [
           "Abstract_3d_landscape_202512190113_e10cw.mp4",
           "Aerial_view_of_202512190112_c4max.mp4",
@@ -200,11 +226,16 @@ export default function VideoBackground({
 
         const videoPaths = videoFiles.map(file => `${videoDirectory}/${file}`);
         
+        // Validate videos in batches (don't validate all at once to avoid blocking)
+        // For now, just use all videos - validation will happen when trying to play
         // Shuffle array for random order
         const shuffled = [...videoPaths].sort(() => Math.random() - 0.5);
         setVideos(shuffled);
         
         if (shuffled.length > 0) {
+          setIsLoading(false);
+        } else {
+          setError(true);
           setIsLoading(false);
         }
       } catch (err) {
@@ -259,10 +290,13 @@ export default function VideoBackground({
 
   // Handle video transitions
   useEffect(() => {
-    if (videos.length === 0 || prefersReducedMotion) return;
+    if (videos.length === 0 || prefersReducedMotion || error) return;
 
     const currentVideo = currentVideoRef.current;
     if (!currentVideo) return;
+
+    const currentVideoPath = videos[currentVideoIndex];
+    if (!currentVideoPath) return;
 
     // Set up video to loop but we'll transition before it loops
     currentVideo.loop = false;
@@ -290,14 +324,49 @@ export default function VideoBackground({
     };
 
     const handleError = () => {
-      console.error("Video loading error, moving to next video");
-      setError(true);
-      // Try next video
-      setTimeout(() => {
-        setCurrentVideoIndex(nextVideoIndex);
-        setNextVideoIndex(getRandomNextIndex(nextVideoIndex, videos.length));
-        setError(false);
-      }, 1000);
+      console.warn(`Video loading error for ${currentVideoPath}`);
+      
+      // Mark this video as failed
+      setFailedVideos(prev => {
+        const newSet = new Set(prev);
+        newSet.add(currentVideoPath);
+        return newSet;
+      });
+      
+      retryCountRef.current++;
+      
+      // If too many videos have failed, show fallback
+      if (retryCountRef.current >= Math.min(videos.length, 5)) {
+        console.warn("Too many video loading errors, showing fallback background");
+        setError(true);
+        return;
+      }
+      
+      // Try next video that hasn't failed
+      const findNextValidVideo = () => {
+        setFailedVideos(currentFailed => {
+          let attempts = 0;
+          const maxAttempts = videos.length;
+          
+          while (attempts < maxAttempts) {
+            const nextIdx = getRandomNextIndex(currentVideoIndex, videos.length);
+            const nextVideo = videos[nextIdx];
+            
+            if (nextVideo && !currentFailed.has(nextVideo)) {
+              setCurrentVideoIndex(nextIdx);
+              setNextVideoIndex(getRandomNextIndex(nextIdx, videos.length));
+              return currentFailed;
+            }
+            attempts++;
+          }
+          
+          // All videos failed
+          setError(true);
+          return currentFailed;
+        });
+      };
+      
+      setTimeout(findNextValidVideo, 500);
     };
 
     currentVideo.addEventListener("timeupdate", handleTimeUpdate);
@@ -305,10 +374,13 @@ export default function VideoBackground({
     currentVideo.addEventListener("error", handleError);
 
     // Play video
-    currentVideo.play().catch((err) => {
-      console.error("Error playing video:", err);
-      setError(true);
-    });
+    const playPromise = currentVideo.play();
+    if (playPromise !== undefined) {
+      playPromise.catch((err) => {
+        console.warn("Error playing video:", err);
+        handleError();
+      });
+    }
 
     return () => {
       currentVideo.removeEventListener("timeupdate", handleTimeUpdate);
@@ -328,6 +400,7 @@ export default function VideoBackground({
     getRandomTransition,
     getRandomNextIndex,
     prefersReducedMotion,
+    error,
   ]);
 
   // Cleanup on unmount
