@@ -8,4 +8,9 @@ export const ENV = {
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME ?? "",
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY ?? "",
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET ?? "",
+  // OAuth configuration (optional - only needed for OAuth flow)
+  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
+  // Forge API configuration (optional - only needed for notifications)
+  forgeApiUrl: process.env.FORGE_API_URL ?? "",
+  forgeApiKey: process.env.FORGE_API_KEY ?? "",
 };
