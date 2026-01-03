@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { Plus, FolderOpen, Music, LogOut, Settings, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
 import SectionCard from "@/components/SectionCard";
+import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -160,6 +161,8 @@ export default function Dashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MusicPlayerSpacer />
     </div>
   );
 }

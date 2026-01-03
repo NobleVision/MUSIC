@@ -5,8 +5,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { FileAudio, FileVideo, MoreVertical, Trash2, Share2, Eye, Download } from "lucide-react";
+import { FileAudio, FileVideo, MoreVertical, Trash2, Share2, Eye, Download, Play, Pause } from "lucide-react";
 import type { MediaFile } from "../../../drizzle/schema";
+import { useMusicPlayer } from "@/contexts/MusicPlayerContext";
 
 interface MediaFileCardProps {
   mediaFile: MediaFile;
@@ -16,7 +17,18 @@ interface MediaFileCardProps {
 export default function MediaFileCard({ mediaFile, onUpdate }: MediaFileCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
-  
+  const { playMediaFile, currentTrack, isPlaying, togglePlay } = useMusicPlayer();
+
+  const isCurrentTrack = currentTrack?.id === mediaFile.id;
+
+  const handlePlay = () => {
+    if (isCurrentTrack) {
+      togglePlay();
+    } else {
+      playMediaFile(mediaFile);
+    }
+  };
+
   const deleteMutation = trpc.media.delete.useMutation({
     onSuccess: () => {
       toast.success("Media file deleted successfully!");
@@ -65,23 +77,41 @@ export default function MediaFileCard({ mediaFile, onUpdate }: MediaFileCardProp
   
   return (
     <>
-      <Card className="hover:shadow-lg transition-shadow group">
+      <Card className={`hover:shadow-lg transition-shadow group ${isCurrentTrack ? 'ring-2 ring-purple-500' : ''}`}>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3 flex-1">
-              {mediaFile.coverArtUrl ? (
-                <img 
-                  src={mediaFile.coverArtUrl} 
-                  alt={mediaFile.title}
-                  className="w-12 h-12 rounded-lg object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-400 rounded-lg flex items-center justify-center">
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
-              )}
+              {/* Album Art with Play Button Overlay */}
+              <div className="relative">
+                {mediaFile.coverArtUrl ? (
+                  <img
+                    src={mediaFile.coverArtUrl}
+                    alt={mediaFile.title}
+                    className="w-12 h-12 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="w-12 h-12 bg-gradient-to-br from-cyan-400 to-blue-400 rounded-lg flex items-center justify-center">
+                    <Icon className="w-6 h-6 text-white" />
+                  </div>
+                )}
+                {/* Play button overlay */}
+                <button
+                  onClick={handlePlay}
+                  className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  {isCurrentTrack && isPlaying ? (
+                    <Pause className="w-6 h-6 text-white" />
+                  ) : (
+                    <Play className="w-6 h-6 text-white" />
+                  )}
+                </button>
+                {/* Playing indicator */}
+                {isCurrentTrack && isPlaying && (
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white animate-pulse" />
+                )}
+              </div>
               <div className="flex-1 min-w-0">
-                <CardTitle className="text-base truncate">{mediaFile.title}</CardTitle>
+                <CardTitle className={`text-base truncate ${isCurrentTrack ? 'text-purple-600' : ''}`}>{mediaFile.title}</CardTitle>
                 {mediaFile.musicStyle && (
                   <CardDescription className="truncate">{mediaFile.musicStyle}</CardDescription>
                 )}

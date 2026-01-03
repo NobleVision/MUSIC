@@ -11,13 +11,16 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Upload, Loader2, FileAudio, FileVideo, Shuffle } from "lucide-react";
 import MediaFileCard from "@/components/MediaFileCard";
+import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
 import { uploadToCloudinary } from "@/lib/storage";
+import { useMusicPlayer } from "@/contexts/MusicPlayerContext";
 
 export default function CategoryView() {
   const [, params] = useRoute("/category/:id");
   const [, setLocation] = useLocation();
   const categoryId = params?.id ? parseInt(params.id) : 0;
-  
+  const { playMediaFile } = useMusicPlayer();
+
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
@@ -156,8 +159,8 @@ export default function CategoryView() {
   const handleShuffle = async () => {
     const result = await shuffleMutation.refetch();
     if (result.data) {
+      playMediaFile(result.data);
       toast.success(`Now playing: ${result.data.title}`);
-      // TODO: Open player with this file
     } else {
       toast.info("No media files available to shuffle");
     }
@@ -337,6 +340,8 @@ export default function CategoryView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MusicPlayerSpacer />
     </div>
   );
 }

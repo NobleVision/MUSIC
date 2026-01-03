@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { ArrowLeft, Star, Send, Tag, Plus, Loader2, FileAudio, FileVideo } from "lucide-react";
+import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
 
 export default function MediaDetail() {
   const [, params] = useRoute("/media/:id");
@@ -359,6 +360,8 @@ export default function MediaDetail() {
           </CardContent>
         </Card>
       </main>
+
+      <MusicPlayerSpacer />
     </div>
   );
 }

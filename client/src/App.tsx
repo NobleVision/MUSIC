@@ -4,6 +4,8 @@ import { Route, Switch, Redirect } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { MusicPlayerProvider } from "./contexts/MusicPlayerContext";
+import MusicPlayer from "./components/MusicPlayer";
 import { Loader2 } from "lucide-react";
 
 // Pages
@@ -76,10 +78,13 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="light">
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
+        <MusicPlayerProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Router />
+            <MusicPlayer />
+          </TooltipProvider>
+        </MusicPlayerProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );

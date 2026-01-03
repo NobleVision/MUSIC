@@ -10,6 +10,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, FolderOpen, Loader2, Music } from "lucide-react";
 import CategoryCard from "@/components/CategoryCard";
+import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
 
 export default function SectionView() {
   const [, params] = useRoute("/section/:id");
@@ -162,6 +163,8 @@ export default function SectionView() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <MusicPlayerSpacer />
     </div>
   );
 }
