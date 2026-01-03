@@ -7,7 +7,7 @@ import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
 import { sdk } from "./_core/sdk";
 import * as db from "./db";
 import { hashPassword, verifyPassword, generateToken, generateApiKey, hashApiKey } from "./auth";
-import { storagePut } from "./storage";
+import { storagePut, generateUploadSignature } from "./storage";
 
 // Admin credentials (set these in Vercel Project Settings > Environment Variables)
 // Defaults are for convenience only; change them in production.
@@ -100,7 +100,29 @@ export const appRouter = router({
         return { success: true, isAdmin: true };
       }),
   }),
-  
+
+  // Upload signature for direct Cloudinary uploads (bypasses Vercel 4.5MB limit)
+  upload: router({
+    getSignature: protectedProcedure
+      .input(z.object({
+        filename: z.string(),
+        contentType: z.string(),
+        folder: z.string().optional(),
+      }))
+      .mutation(({ input }) => {
+        // Generate a unique key for this upload
+        const folder = input.folder || 'media';
+        const key = `${folder}/${Date.now()}-${input.filename}`;
+
+        const signature = generateUploadSignature(key, input.contentType);
+
+        return {
+          ...signature,
+          key,
+        };
+      }),
+  }),
+
   // Sections management
   sections: router({
     list: protectedProcedure.query(async ({ ctx }) => {

@@ -11,7 +11,7 @@ import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { ArrowLeft, Plus, Upload, Loader2, FileAudio, FileVideo, Shuffle } from "lucide-react";
 import MediaFileCard from "@/components/MediaFileCard";
-import { storagePut } from "@/lib/storage";
+import { uploadToCloudinary } from "@/lib/storage";
 
 export default function CategoryView() {
   const [, params] = useRoute("/category/:id");
@@ -76,45 +76,67 @@ export default function CategoryView() {
     if (coverArtInputRef.current) coverArtInputRef.current.value = "";
   };
   
+  // Get upload signature mutation for direct Cloudinary uploads
+  const getSignatureMutation = trpc.upload.getSignature.useMutation();
+
   const handleUpload = async () => {
     if (!mediaFile) {
       toast.error("Please select a media file");
       return;
     }
-    
+
     if (!title.trim()) {
       toast.error("Please enter a title");
       return;
     }
-    
+
     setUploading(true);
-    
+
     try {
-      // Upload media file to S3
-      setUploadProgress("Uploading media file...");
-      const mediaBuffer = await mediaFile.arrayBuffer();
-      const mediaKey = `media/${Date.now()}-${mediaFile.name}`;
-      const mediaUploadResult = await storagePut(mediaKey, mediaBuffer, mediaFile.type);
-      
+      // Get signed upload parameters from server
+      setUploadProgress("Preparing upload...");
+      const mediaSignature = await getSignatureMutation.mutateAsync({
+        filename: mediaFile.name,
+        contentType: mediaFile.type,
+        folder: 'media',
+      });
+
+      // Upload media file directly to Cloudinary (bypasses Vercel 4.5MB limit)
+      setUploadProgress("Uploading media file... 0%");
+      const mediaUploadResult = await uploadToCloudinary(
+        mediaSignature,
+        mediaFile,
+        (percent) => setUploadProgress(`Uploading media file... ${percent}%`)
+      );
+
       // Upload cover art if provided
       let coverArtKey = undefined;
       let coverArtUrl = undefined;
       if (coverArtFile) {
-        setUploadProgress("Uploading cover art...");
-        const coverBuffer = await coverArtFile.arrayBuffer();
-        const coverKey = `covers/${Date.now()}-${coverArtFile.name}`;
-        const coverUploadResult = await storagePut(coverKey, coverBuffer, coverArtFile.type);
-        coverArtKey = coverKey;
+        setUploadProgress("Preparing cover art upload...");
+        const coverSignature = await getSignatureMutation.mutateAsync({
+          filename: coverArtFile.name,
+          contentType: coverArtFile.type,
+          folder: 'covers',
+        });
+
+        setUploadProgress("Uploading cover art... 0%");
+        const coverUploadResult = await uploadToCloudinary(
+          coverSignature,
+          coverArtFile,
+          (percent) => setUploadProgress(`Uploading cover art... ${percent}%`)
+        );
+        coverArtKey = coverUploadResult.key;
         coverArtUrl = coverUploadResult.url;
       }
-      
+
       // Create media file record
       setUploadProgress("Creating record...");
       await createMediaMutation.mutateAsync({
         categoryId,
         title,
         filename: mediaFile.name,
-        fileKey: mediaKey,
+        fileKey: mediaUploadResult.key,
         fileUrl: mediaUploadResult.url,
         fileSize: mediaFile.size,
         mimeType: mediaFile.type,

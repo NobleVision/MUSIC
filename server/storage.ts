@@ -21,6 +21,57 @@ function getResourceType(contentType: string): "image" | "video" | "raw" | "auto
   return "raw";
 }
 
+export interface CloudinaryUploadSignature {
+  signature: string;
+  timestamp: number;
+  cloudName: string;
+  apiKey: string;
+  folder: string;
+  publicId: string;
+  resourceType: "image" | "video" | "raw" | "auto";
+}
+
+/**
+ * Generate a signed upload URL for direct browser-to-Cloudinary uploads
+ * This bypasses Vercel's 4.5MB body size limit
+ */
+export function generateUploadSignature(
+  key: string,
+  contentType: string
+): CloudinaryUploadSignature {
+  const publicId = normalizeKey(key);
+  const resourceType = getResourceType(contentType);
+  const timestamp = Math.round(Date.now() / 1000);
+
+  // Extract folder from the key (e.g., "media/123-file.mp3" -> "media")
+  const folder = publicId.includes('/') ? publicId.split('/').slice(0, -1).join('/') : '';
+  const finalPublicId = publicId.includes('/') ? publicId.split('/').pop()! : publicId;
+
+  // Parameters to sign (must be in alphabetical order)
+  const paramsToSign: Record<string, string | number> = {
+    folder,
+    overwrite: 1,
+    public_id: finalPublicId,
+    timestamp,
+  };
+
+  // Generate signature
+  const signature = cloudinary.utils.api_sign_request(
+    paramsToSign,
+    process.env.CLOUDINARY_API_SECRET!
+  );
+
+  return {
+    signature,
+    timestamp,
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
+    apiKey: process.env.CLOUDINARY_API_KEY!,
+    folder,
+    publicId: finalPublicId,
+    resourceType,
+  };
+}
+
 export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
