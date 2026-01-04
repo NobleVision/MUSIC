@@ -9,6 +9,7 @@ import { createContext } from "./_core/context";
 import { registerOAuthRoutes } from "./_core/oauth";
 import { uploadRouter } from "./upload";
 import { externalApiRouter } from "./external-api";
+import { activityBroadcaster } from "./sse";
 
 const app = express();
 
@@ -53,6 +54,35 @@ app.use(
     createContext,
   })
 );
+
+// Server-Sent Events endpoint for real-time activity updates
+// Note: SSE may have limitations on Vercel Serverless due to connection timeouts
+app.get("/api/activity-stream", (req: Request, res: Response) => {
+  // Set SSE headers
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("X-Accel-Buffering", "no"); // Disable nginx buffering
+
+  // Flush headers immediately
+  res.flushHeaders();
+
+  // Send initial connection message
+  res.write(": connected\n\n");
+
+  // Add client to broadcaster
+  const clientId = activityBroadcaster.addClient(res);
+
+  // Handle client disconnect
+  req.on("close", () => {
+    activityBroadcaster.removeClient(clientId);
+  });
+
+  // Handle connection errors
+  req.on("error", () => {
+    activityBroadcaster.removeClient(clientId);
+  });
+});
 
 // Health check
 app.get("/api/health", (_req: Request, res: Response) => {

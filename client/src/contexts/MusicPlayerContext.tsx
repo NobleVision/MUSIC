@@ -111,6 +111,15 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
   const hasRecordedPlayRef = useRef<boolean>(false);
   const currentTrackIdRef = useRef<number | null>(null);
 
+  // Store callback in a ref to avoid triggering effect re-runs when callback changes
+  // This is critical: if onPlayRecorded is in the useEffect dependency array,
+  // calling the mutation will cause the callback to change (mutation state changes),
+  // which re-runs the effect and pauses the audio during cleanup!
+  const onPlayRecordedRef = useRef(onPlayRecorded);
+  useEffect(() => {
+    onPlayRecordedRef.current = onPlayRecorded;
+  }, [onPlayRecorded]);
+
   // Video background state - persisted to localStorage
   const [videoBackground, setVideoBackground] = useState<VideoBackgroundState>(() => {
     const saved = localStorage.getItem(VIDEO_BG_ENABLED_KEY);
@@ -136,7 +145,10 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
-  // Initialize audio element
+  // Initialize audio element - runs only once on mount
+  // IMPORTANT: Do NOT add onPlayRecorded to dependencies!
+  // If the callback changes, this effect would re-run and pause the audio during cleanup.
+  // Instead, we use onPlayRecordedRef which is updated separately.
   useEffect(() => {
     const audio = new Audio();
     audio.volume = state.volume;
@@ -145,24 +157,26 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
     const handleTimeUpdate = () => {
       const currentTime = audio.currentTime;
       const duration = audio.duration || 0;
-      
+
       setState(s => ({ ...s, currentTime }));
-      
+
       // Check if we should record a play (threshold reached)
+      // Use ref to get the latest callback without causing effect re-runs
+      const callback = onPlayRecordedRef.current;
       if (
         !hasRecordedPlayRef.current &&
         currentTrackIdRef.current !== null &&
         duration > 0 &&
-        onPlayRecorded
+        callback
       ) {
         const playDuration = currentTime - playStartTimeRef.current;
         const thresholdReached =
           playDuration >= PLAY_THRESHOLD_SECONDS ||
           currentTime / duration >= PLAY_THRESHOLD_PERCENTAGE;
-        
+
         if (thresholdReached) {
           hasRecordedPlayRef.current = true;
-          onPlayRecorded(currentTrackIdRef.current, Math.round(playDuration));
+          callback(currentTrackIdRef.current, Math.round(playDuration));
         }
       }
     };
@@ -173,16 +187,18 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
 
     const handleEnded = () => {
       // Record play on track end if not already recorded
+      // Use ref to get the latest callback
+      const callback = onPlayRecordedRef.current;
       if (
         !hasRecordedPlayRef.current &&
         currentTrackIdRef.current !== null &&
-        onPlayRecorded
+        callback
       ) {
         const playDuration = audio.currentTime - playStartTimeRef.current;
-        onPlayRecorded(currentTrackIdRef.current, Math.round(playDuration));
+        callback(currentTrackIdRef.current, Math.round(playDuration));
         hasRecordedPlayRef.current = true;
       }
-      
+
       setState(s => ({ ...s, isPlaying: false, currentTime: 0 }));
     };
 
@@ -215,7 +231,8 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
       audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("error", handleError);
     };
-  }, [onPlayRecorded]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty deps - only run once on mount
 
   const play = useCallback((track: Track) => {
     const audio = audioRef.current;

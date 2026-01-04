@@ -618,13 +618,14 @@ export interface EventLogResult {
 }
 
 /**
- * Get the date threshold for a time period
+ * Get the date threshold for a time period.
+ * Returns a Date object for use with drizzle-orm's gte() function.
  */
 function getDateThreshold(period: TimePeriod): Date | null {
   if (period === "all") {
     return null;
   }
-  
+
   const now = new Date();
   switch (period) {
     case "24h":
@@ -636,6 +637,15 @@ function getDateThreshold(period: TimePeriod): Date | null {
     default:
       return null;
   }
+}
+
+/**
+ * Get the date threshold as an ISO string for use in raw SQL template literals.
+ * Raw SQL in Drizzle doesn't properly serialize Date objects.
+ */
+function getDateThresholdString(period: TimePeriod): string | null {
+  const threshold = getDateThreshold(period);
+  return threshold ? threshold.toISOString() : null;
 }
 
 /**
@@ -1187,7 +1197,8 @@ export async function getTrendingMedia(limit: number = 10): Promise<MediaFileWit
 
   try {
     const clampedLimit = Math.min(Math.max(1, limit), 50);
-    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Convert Date to ISO string for raw SQL template literals
+    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
     // Get media files with their recent engagement counts
     const result = await db
@@ -1202,35 +1213,35 @@ export async function getTrendingMedia(limit: number = 10): Promise<MediaFileWit
         hotnessScore: mediaFiles.hotnessScore,
         createdAt: mediaFiles.createdAt,
         recentPlays: sql<number>`(
-          SELECT COUNT(*) FROM play_logs 
-          WHERE play_logs.media_file_id = ${mediaFiles.id} 
-          AND play_logs."completedAt" >= ${last24h}
+          SELECT COUNT(*) FROM play_logs
+          WHERE play_logs.media_file_id = ${mediaFiles.id}
+          AND play_logs."completedAt" >= ${last24h}::timestamp
         )`,
         recentDownloads: sql<number>`(
-          SELECT COUNT(*) FROM download_logs 
-          WHERE download_logs.media_file_id = ${mediaFiles.id} 
-          AND download_logs."downloadedAt" >= ${last24h}
+          SELECT COUNT(*) FROM download_logs
+          WHERE download_logs.media_file_id = ${mediaFiles.id}
+          AND download_logs."downloadedAt" >= ${last24h}::timestamp
         )`,
         recentVotes: sql<number>`(
-          SELECT COUNT(*) FROM votes 
-          WHERE votes.media_file_id = ${mediaFiles.id} 
-          AND votes."createdAt" >= ${last24h}
+          SELECT COUNT(*) FROM votes
+          WHERE votes.media_file_id = ${mediaFiles.id}
+          AND votes."createdAt" >= ${last24h}::timestamp
         )`,
       })
       .from(mediaFiles)
       .orderBy(
         desc(sql`(
-          SELECT COUNT(*) FROM play_logs 
-          WHERE play_logs.media_file_id = ${mediaFiles.id} 
-          AND play_logs."completedAt" >= ${last24h}
+          SELECT COUNT(*) FROM play_logs
+          WHERE play_logs.media_file_id = ${mediaFiles.id}
+          AND play_logs."completedAt" >= ${last24h}::timestamp
         ) + (
-          SELECT COUNT(*) FROM download_logs 
-          WHERE download_logs.media_file_id = ${mediaFiles.id} 
-          AND download_logs."downloadedAt" >= ${last24h}
+          SELECT COUNT(*) FROM download_logs
+          WHERE download_logs.media_file_id = ${mediaFiles.id}
+          AND download_logs."downloadedAt" >= ${last24h}::timestamp
         ) + (
-          SELECT COUNT(*) FROM votes 
-          WHERE votes.media_file_id = ${mediaFiles.id} 
-          AND votes."createdAt" >= ${last24h}
+          SELECT COUNT(*) FROM votes
+          WHERE votes.media_file_id = ${mediaFiles.id}
+          AND votes."createdAt" >= ${last24h}::timestamp
         )`)
       )
       .limit(clampedLimit);
@@ -1271,11 +1282,12 @@ export async function getPopularMedia(
 
   try {
     const clampedLimit = Math.min(Math.max(1, limit), 50);
-    const threshold = getDateThreshold(period);
+    // Use ISO string for raw SQL template literals
+    const thresholdStr = getDateThresholdString(period);
 
     let result;
-    
-    if (threshold) {
+
+    if (thresholdStr) {
       // Filter by time period using play_logs
       result = await db
         .select({
@@ -1289,17 +1301,17 @@ export async function getPopularMedia(
           hotnessScore: mediaFiles.hotnessScore,
           createdAt: mediaFiles.createdAt,
           periodPlayCount: sql<number>`(
-            SELECT COUNT(*) FROM play_logs 
-            WHERE play_logs.media_file_id = ${mediaFiles.id} 
-            AND play_logs."completedAt" >= ${threshold}
+            SELECT COUNT(*) FROM play_logs
+            WHERE play_logs.media_file_id = ${mediaFiles.id}
+            AND play_logs."completedAt" >= ${thresholdStr}::timestamp
           )`,
         })
         .from(mediaFiles)
         .orderBy(
           desc(sql`(
-            SELECT COUNT(*) FROM play_logs 
-            WHERE play_logs.media_file_id = ${mediaFiles.id} 
-            AND play_logs."completedAt" >= ${threshold}
+            SELECT COUNT(*) FROM play_logs
+            WHERE play_logs.media_file_id = ${mediaFiles.id}
+            AND play_logs."completedAt" >= ${thresholdStr}::timestamp
           )`)
         )
         .limit(clampedLimit);
@@ -1400,7 +1412,8 @@ export async function updateHotnessScores(): Promise<number> {
   }
 
   try {
-    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    // Use ISO string for raw SQL template literals
+    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const now = new Date();
 
     // Get all media files with their recent engagement
@@ -1409,25 +1422,25 @@ export async function updateHotnessScores(): Promise<number> {
         id: mediaFiles.id,
         createdAt: mediaFiles.createdAt,
         recentPlays: sql<number>`(
-          SELECT COUNT(*) FROM play_logs 
-          WHERE play_logs.media_file_id = ${mediaFiles.id} 
-          AND play_logs."completedAt" >= ${last24h}
+          SELECT COUNT(*) FROM play_logs
+          WHERE play_logs.media_file_id = ${mediaFiles.id}
+          AND play_logs."completedAt" >= ${last24h}::timestamp
         )`,
         recentDownloads: sql<number>`(
-          SELECT COUNT(*) FROM download_logs 
-          WHERE download_logs.media_file_id = ${mediaFiles.id} 
-          AND download_logs."downloadedAt" >= ${last24h}
+          SELECT COUNT(*) FROM download_logs
+          WHERE download_logs.media_file_id = ${mediaFiles.id}
+          AND download_logs."downloadedAt" >= ${last24h}::timestamp
         )`,
         recentVotes: sql<number>`(
-          SELECT COALESCE(SUM(CASE WHEN votes.vote_type = 'up' THEN 1 ELSE -1 END), 0) 
-          FROM votes 
-          WHERE votes.media_file_id = ${mediaFiles.id} 
-          AND votes."createdAt" >= ${last24h}
+          SELECT COALESCE(SUM(CASE WHEN votes.vote_type = 'up' THEN 1 ELSE -1 END), 0)
+          FROM votes
+          WHERE votes.media_file_id = ${mediaFiles.id}
+          AND votes."createdAt" >= ${last24h}::timestamp
         )`,
         recentComments: sql<number>`(
-          SELECT COUNT(*) FROM comments 
-          WHERE comments.media_file_id = ${mediaFiles.id} 
-          AND comments."createdAt" >= ${last24h}
+          SELECT COUNT(*) FROM comments
+          WHERE comments.media_file_id = ${mediaFiles.id}
+          AND comments."createdAt" >= ${last24h}::timestamp
         )`,
       })
       .from(mediaFiles);
