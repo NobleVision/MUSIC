@@ -6,9 +6,10 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Plus, FolderOpen, Music, LogOut, Settings, Loader2 } from "lucide-react";
+import { Plus, FolderOpen, Music, LogOut, Settings, Loader2, TrendingUp, Activity } from "lucide-react";
 import { useLocation } from "wouter";
 import SectionCard from "@/components/SectionCard";
 import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
@@ -17,6 +18,7 @@ import ActivityFeed from "@/components/ActivityFeed";
 import TrendingList from "@/components/TrendingList";
 
 const ACTIVITY_FEED_COLLAPSED_KEY = "activity-feed-collapsed";
+const DASHBOARD_TAB_KEY = "dashboard-active-tab";
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -24,12 +26,23 @@ export default function Dashboard() {
   const [showNewSectionDialog, setShowNewSectionDialog] = useState(false);
   const [newSectionName, setNewSectionName] = useState("");
   const [newSectionDescription, setNewSectionDescription] = useState("");
-  
+
+  // Active tab state - persisted to localStorage, defaults to "my-sections"
+  const [activeTab, setActiveTab] = useState(() => {
+    const saved = localStorage.getItem(DASHBOARD_TAB_KEY);
+    return saved === "social" ? "social" : "my-sections";
+  });
+
   // Activity feed collapsed state - persisted to localStorage
   const [activityFeedCollapsed, setActivityFeedCollapsed] = useState(() => {
     const saved = localStorage.getItem(ACTIVITY_FEED_COLLAPSED_KEY);
     return saved === "true";
   });
+
+  // Persist tab state to localStorage
+  useEffect(() => {
+    localStorage.setItem(DASHBOARD_TAB_KEY, activeTab);
+  }, [activeTab]);
 
   // Persist collapsed state to localStorage
   useEffect(() => {
@@ -102,63 +115,82 @@ export default function Dashboard() {
         </div>
       </PageHeader>
       
-      {/* Main Content */}
+      {/* Main Content with Tabs */}
       <main className="container mx-auto px-4 py-8">
-        {/* Activity Feed - Collapsible panel at top */}
-        <div className="mb-6">
-          <ActivityFeed
-            maxItems={15}
-            collapsible
-            defaultCollapsed={activityFeedCollapsed}
-            showHeader
-          />
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-6">
+            <TabsTrigger value="my-sections" className="flex items-center gap-2">
+              <FolderOpen className="w-4 h-4" />
+              My Sections
+            </TabsTrigger>
+            <TabsTrigger value="social" className="flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              Social Activity
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Trending/Popular/Hot Section */}
-        <div className="mb-6">
-          <TrendingList
-            defaultType="trending"
-            defaultPeriod="24h"
-            limit={10}
-            showRank
-            showTypeSelector
-            showPeriodSelector
-            onMediaClick={(mediaFileId) => setLocation(`/media/${mediaFileId}`)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">My Sections</h2>
-            <p className="text-gray-600">Organize your music into sections and categories</p>
-          </div>
-          <Button onClick={() => setShowNewSectionDialog(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            New Section
-          </Button>
-        </div>
-        
-        {sections && sections.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <FolderOpen className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No sections yet</h3>
-              <p className="text-gray-600 mb-4">
-                Create your first section to start organizing your music
-              </p>
+          {/* My Sections Tab (Default) */}
+          <TabsContent value="my-sections">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">My Sections</h2>
+                <p className="text-gray-600">Organize your music into sections and categories</p>
+              </div>
               <Button onClick={() => setShowNewSectionDialog(true)}>
                 <Plus className="w-4 h-4 mr-2" />
-                Create Section
+                New Section
               </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {sections?.map((section) => (
-              <SectionCard key={section.id} section={section} onUpdate={refetch} />
-            ))}
-          </div>
-        )}
+            </div>
+
+            {sections && sections.length === 0 ? (
+              <Card className="text-center py-12">
+                <CardContent>
+                  <FolderOpen className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No sections yet</h3>
+                  <p className="text-gray-600 mb-4">
+                    Create your first section to start organizing your music
+                  </p>
+                  <Button onClick={() => setShowNewSectionDialog(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Section
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {sections?.map((section) => (
+                  <SectionCard key={section.id} section={section} onUpdate={refetch} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Social Activity Tab */}
+          <TabsContent value="social">
+            {/* Live Activity Feed */}
+            <div className="mb-6">
+              <ActivityFeed
+                maxItems={15}
+                collapsible
+                defaultCollapsed={activityFeedCollapsed}
+                showHeader
+              />
+            </div>
+
+            {/* Trending/Popular/Hot Section */}
+            <div className="mb-6">
+              <TrendingList
+                defaultType="trending"
+                defaultPeriod="24h"
+                limit={10}
+                showRank
+                showTypeSelector
+                showPeriodSelector
+                onMediaClick={(mediaFileId) => setLocation(`/media/${mediaFileId}`)}
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </main>
       
       {/* New Section Dialog */}

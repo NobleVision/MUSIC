@@ -2,7 +2,7 @@ import { useMusicPlayer } from "@/contexts/MusicPlayerContext";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { Play, Pause, Square, Volume2, VolumeX, Music, X, Loader2, MonitorPlay, MonitorOff } from "lucide-react";
+import { Play, Pause, Square, Volume2, VolumeX, Music, X, Loader2, MonitorPlay, MonitorOff, SkipBack, SkipForward, Shuffle, Repeat } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function formatTime(seconds: number): string {
@@ -26,6 +26,11 @@ export default function MusicPlayer() {
     seek,
     videoBackground,
     toggleVideoBackground,
+    playlist,
+    toggleShuffle,
+    toggleLoop,
+    skipNext,
+    skipPrevious,
   } = useMusicPlayer();
 
   // Don't render if no track is loaded
@@ -59,11 +64,51 @@ export default function MusicPlayer() {
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
               {currentTrack.artistName || currentTrack.musicStyle || "Unknown Artist"}
+              {playlist.queue.length > 0 && (
+                <span className="ml-2 text-purple-500">
+                  ({playlist.currentIndex + 1}/{playlist.queue.length})
+                </span>
+              )}
             </p>
           </div>
 
           {/* Playback Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
+            {/* Shuffle Toggle */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleShuffle}
+                  className={cn(
+                    "h-8 w-8",
+                    playlist.shuffleMode
+                      ? "text-purple-500 hover:text-purple-600"
+                      : "text-gray-400 hover:text-gray-600"
+                  )}
+                  disabled={playlist.queue.length === 0}
+                >
+                  <Shuffle className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{playlist.shuffleMode ? "Shuffle on" : "Shuffle off"}</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Skip Previous */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={skipPrevious}
+              className="h-8 w-8"
+              disabled={playlist.queue.length === 0}
+            >
+              <SkipBack className="h-4 w-4" />
+            </Button>
+
+            {/* Play/Pause */}
             <Button
               variant="ghost"
               size="icon"
@@ -79,11 +124,46 @@ export default function MusicPlayer() {
                 <Play className="h-5 w-5" />
               )}
             </Button>
+
+            {/* Skip Next */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={skipNext}
+              className="h-8 w-8"
+              disabled={playlist.queue.length === 0}
+            >
+              <SkipForward className="h-4 w-4" />
+            </Button>
+
+            {/* Loop Toggle */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleLoop}
+                  className={cn(
+                    "h-8 w-8",
+                    playlist.loopMode
+                      ? "text-purple-500 hover:text-purple-600"
+                      : "text-gray-400 hover:text-gray-600"
+                  )}
+                >
+                  <Repeat className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{playlist.loopMode ? "Loop on" : "Loop off"}</p>
+              </TooltipContent>
+            </Tooltip>
+
+            {/* Stop */}
             <Button
               variant="ghost"
               size="icon"
               onClick={stop}
-              className="h-10 w-10"
+              className="h-8 w-8"
             >
               <Square className="h-4 w-4" />
             </Button>

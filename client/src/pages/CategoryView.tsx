@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { ArrowLeft, Plus, Upload, Loader2, FileAudio, FileVideo, Shuffle } from "lucide-react";
+import { ArrowLeft, Plus, Upload, Loader2, FileAudio, FileVideo, Shuffle, Play, Repeat } from "lucide-react";
 import MediaFileCard from "@/components/MediaFileCard";
 import MusicPlayerSpacer from "@/components/MusicPlayerSpacer";
 import PageWrapper, { PageHeader } from "@/components/PageWrapper";
@@ -20,7 +20,7 @@ export default function CategoryView() {
   const [, params] = useRoute("/category/:id");
   const [, setLocation] = useLocation();
   const categoryId = params?.id ? parseInt(params.id) : 0;
-  const { playMediaFile } = useMusicPlayer();
+  const { playMediaFile, playPlaylist, toggleShuffle, toggleLoop, playlist } = useMusicPlayer();
 
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -157,16 +157,24 @@ export default function CategoryView() {
     }
   };
   
-  const handleShuffle = async () => {
-    const result = await shuffleMutation.refetch();
-    if (result.data) {
-      playMediaFile(result.data);
-      toast.success(`Now playing: ${result.data.title}`);
+  const handlePlayAll = () => {
+    if (mediaFiles && mediaFiles.length > 0) {
+      playPlaylist(mediaFiles, false);
+      toast.success(`Playing ${mediaFiles.length} tracks`);
+    } else {
+      toast.info("No media files available to play");
+    }
+  };
+
+  const handleShuffle = () => {
+    if (mediaFiles && mediaFiles.length > 0) {
+      playPlaylist(mediaFiles, true);
+      toast.success(`Shuffling ${mediaFiles.length} tracks`);
     } else {
       toast.info("No media files available to shuffle");
     }
   };
-  
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -194,10 +202,24 @@ export default function CategoryView() {
                 <p className="text-sm text-gray-500">Media files</p>
               </div>
             </div>
-            <Button variant="outline" onClick={handleShuffle}>
-              <Shuffle className="w-4 h-4 mr-2" />
-              Shuffle
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handlePlayAll} disabled={!mediaFiles || mediaFiles.length === 0}>
+                <Play className="w-4 h-4 mr-2" />
+                Play All
+              </Button>
+              <Button variant="outline" onClick={handleShuffle} disabled={!mediaFiles || mediaFiles.length === 0}>
+                <Shuffle className="w-4 h-4 mr-2" />
+                Shuffle
+              </Button>
+              <Button
+                variant={playlist.loopMode ? "default" : "outline"}
+                size="icon"
+                onClick={toggleLoop}
+                title={playlist.loopMode ? "Loop enabled" : "Loop disabled"}
+              >
+                <Repeat className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </PageHeader>

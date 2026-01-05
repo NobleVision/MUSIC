@@ -15,6 +15,19 @@ export interface Track {
   mediaType: "audio" | "video";
 }
 
+interface PlaylistState {
+  /** Queue of tracks to play */
+  queue: Track[];
+  /** Current position in the queue (index) */
+  currentIndex: number;
+  /** Whether shuffle mode is enabled */
+  shuffleMode: boolean;
+  /** Whether loop mode is enabled (repeat the whole playlist) */
+  loopMode: boolean;
+  /** Original order of tracks (used when toggling shuffle off) */
+  originalOrder: Track[];
+}
+
 interface MusicPlayerState {
   currentTrack: Track | null;
   isPlaying: boolean;
@@ -45,6 +58,20 @@ interface MusicPlayerContextType extends MusicPlayerState {
   toggleVideoBackground: () => void;
   /** Whether video should currently be shown (enabled + playing + not reduced motion) */
   shouldShowVideoBackground: boolean;
+  /** Playlist functionality */
+  playlist: PlaylistState;
+  /** Play all tracks from an array of media files */
+  playPlaylist: (mediaFiles: MediaFile[], shuffle?: boolean) => void;
+  /** Toggle shuffle mode */
+  toggleShuffle: () => void;
+  /** Toggle loop mode */
+  toggleLoop: () => void;
+  /** Skip to next track in queue */
+  skipNext: () => void;
+  /** Skip to previous track in queue */
+  skipPrevious: () => void;
+  /** Clear the current playlist */
+  clearPlaylist: () => void;
 }
 
 const MusicPlayerContext = createContext<MusicPlayerContextType | null>(null);
@@ -95,6 +122,16 @@ function getRandomVideo(): string {
   return `/videos/${VIDEO_FILES[randomIndex]}`;
 }
 
+// Helper function to shuffle an array
+function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
 export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerProviderProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [state, setState] = useState<MusicPlayerState>({
@@ -104,6 +141,15 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
     currentTime: 0,
     duration: 0,
     isLoading: false,
+  });
+
+  // Playlist state
+  const [playlist, setPlaylist] = useState<PlaylistState>({
+    queue: [],
+    currentIndex: -1,
+    shuffleMode: false,
+    loopMode: false,
+    originalOrder: [],
   });
 
   // Track play recording state
@@ -119,6 +165,15 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
   useEffect(() => {
     onPlayRecordedRef.current = onPlayRecorded;
   }, [onPlayRecorded]);
+
+  // Store playlist state in a ref for use in handleEnded
+  const playlistRef = useRef(playlist);
+  useEffect(() => {
+    playlistRef.current = playlist;
+  }, [playlist]);
+
+  // Ref for the onTrackEnded callback (to play next track)
+  const onTrackEndedRef = useRef<(() => void) | null>(null);
 
   // Video background state - persisted to localStorage
   const [videoBackground, setVideoBackground] = useState<VideoBackgroundState>(() => {
@@ -199,7 +254,14 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
         hasRecordedPlayRef.current = true;
       }
 
-      setState(s => ({ ...s, isPlaying: false, currentTime: 0 }));
+      // Call onTrackEnded to handle playlist progression
+      const onEnded = onTrackEndedRef.current;
+      if (onEnded) {
+        onEnded();
+      } else {
+        // No playlist active, just stop
+        setState(s => ({ ...s, isPlaying: false, currentTime: 0 }));
+      }
     };
 
     const handleLoadStart = () => {
@@ -323,6 +385,145 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
     });
   }, []);
 
+  // Play a track from the current queue by index
+  const playTrackAtIndex = useCallback((index: number, queue: Track[]) => {
+    if (index >= 0 && index < queue.length) {
+      const track = queue[index];
+      play(track);
+      setPlaylist(prev => ({ ...prev, currentIndex: index }));
+    }
+  }, [play]);
+
+  // Skip to next track in queue
+  const skipNext = useCallback(() => {
+    const { queue, currentIndex, loopMode } = playlistRef.current;
+    if (queue.length === 0) return;
+
+    let nextIndex = currentIndex + 1;
+
+    if (nextIndex >= queue.length) {
+      if (loopMode) {
+        // Loop back to beginning
+        nextIndex = 0;
+      } else {
+        // End of playlist, stop playing
+        setState(s => ({ ...s, isPlaying: false, currentTime: 0 }));
+        setPlaylist(prev => ({ ...prev, currentIndex: -1 }));
+        return;
+      }
+    }
+
+    playTrackAtIndex(nextIndex, queue);
+  }, [playTrackAtIndex]);
+
+  // Skip to previous track in queue
+  const skipPrevious = useCallback(() => {
+    const { queue, currentIndex } = playlistRef.current;
+    if (queue.length === 0) return;
+
+    // If we're more than 3 seconds into the track, restart it
+    if (audioRef.current && audioRef.current.currentTime > 3) {
+      audioRef.current.currentTime = 0;
+      return;
+    }
+
+    let prevIndex = currentIndex - 1;
+    if (prevIndex < 0) {
+      prevIndex = playlist.loopMode ? queue.length - 1 : 0;
+    }
+
+    playTrackAtIndex(prevIndex, queue);
+  }, [playTrackAtIndex, playlist.loopMode]);
+
+  // Set up the onTrackEnded callback to use skipNext
+  useEffect(() => {
+    onTrackEndedRef.current = skipNext;
+  }, [skipNext]);
+
+  // Play all tracks from an array of media files
+  const playPlaylist = useCallback((mediaFiles: MediaFile[], shuffle = false) => {
+    if (mediaFiles.length === 0) return;
+
+    // Convert MediaFiles to Tracks
+    const tracks: Track[] = mediaFiles.map(mf => ({
+      id: mf.id,
+      title: mf.title,
+      artistName: mf.artistName,
+      fileUrl: mf.fileUrl,
+      coverArtUrl: mf.coverArtUrl,
+      musicStyle: mf.musicStyle,
+      mediaType: mf.mediaType,
+    }));
+
+    // Shuffle if requested
+    const queue = shuffle ? shuffleArray(tracks) : tracks;
+
+    // Update playlist state
+    setPlaylist({
+      queue,
+      currentIndex: 0,
+      shuffleMode: shuffle,
+      loopMode: playlist.loopMode, // Keep current loop setting
+      originalOrder: tracks,
+    });
+
+    // Play the first track
+    play(queue[0]);
+  }, [play, playlist.loopMode]);
+
+  // Toggle shuffle mode
+  const toggleShuffle = useCallback(() => {
+    setPlaylist(prev => {
+      const newShuffleMode = !prev.shuffleMode;
+
+      if (newShuffleMode) {
+        // Switching to shuffle: shuffle the remaining tracks, keep current at position 0
+        const currentTrack = prev.queue[prev.currentIndex];
+        const remainingTracks = prev.queue.filter((_, i) => i !== prev.currentIndex);
+        const shuffledRemaining = shuffleArray(remainingTracks);
+        const newQueue = currentTrack ? [currentTrack, ...shuffledRemaining] : shuffledRemaining;
+
+        return {
+          ...prev,
+          shuffleMode: true,
+          queue: newQueue,
+          currentIndex: 0,
+        };
+      } else {
+        // Switching off shuffle: restore original order, find current track position
+        const currentTrack = prev.queue[prev.currentIndex];
+        const newIndex = prev.originalOrder.findIndex(t => t.id === currentTrack?.id);
+
+        return {
+          ...prev,
+          shuffleMode: false,
+          queue: prev.originalOrder,
+          currentIndex: newIndex >= 0 ? newIndex : 0,
+        };
+      }
+    });
+  }, []);
+
+  // Toggle loop mode
+  const toggleLoop = useCallback(() => {
+    setPlaylist(prev => ({
+      ...prev,
+      loopMode: !prev.loopMode,
+    }));
+  }, []);
+
+  // Clear the current playlist
+  const clearPlaylist = useCallback(() => {
+    setPlaylist({
+      queue: [],
+      currentIndex: -1,
+      shuffleMode: false,
+      loopMode: false,
+      originalOrder: [],
+    });
+    onTrackEndedRef.current = null;
+  }, []);
+
   const isPlayerVisible = state.currentTrack !== null;
 
   // Show video background when: enabled + music playing + not reduced motion
@@ -347,6 +548,13 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
       videoBackground,
       toggleVideoBackground,
       shouldShowVideoBackground,
+      playlist,
+      playPlaylist,
+      toggleShuffle,
+      toggleLoop,
+      skipNext,
+      skipPrevious,
+      clearPlaylist,
     }}>
       {children}
     </MusicPlayerContext.Provider>
