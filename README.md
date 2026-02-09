@@ -2,7 +2,57 @@
 
 A comprehensive media management and distribution platform with secure admin access, hierarchical organization, social features, and public sharing capabilities.
 
-## Recent Changes (December 2024)
+## Recent Changes (January 2026)
+
+### Social Engagement Features (NEW)
+- **Voting System**: Thumbs up/down voting on media files with IP-based uniqueness
+- **Play Count Tracking**: Automatic tracking when playback completes or reaches 30 seconds
+- **Download Count Tracking**: Track file downloads with detailed logging
+- **View Count Tracking**: Track page views for media detail pages
+- **Trending Content**: Discover content with highest engagement velocity (last 24h)
+- **Popular Content**: Browse most-played content with time period filters (24h, 7d, 30d, all-time)
+- **Hot Content**: Content ranked by hotness score (weighted engagement with time decay)
+- **Real-time Activity Feed**: Live updates via Server-Sent Events showing platform activity
+- **Rate Limiting**: Spam prevention (10 votes/min, 100 plays/hr per IP)
+- **Privacy Protection**: IP addresses stored as SHA-256 hashes
+
+### New Components
+- `VoteButtons` - Thumbs up/down with animated count updates
+- `PopularityMetrics` - Display play/download/view counts and votes
+- `ActivityFeed` - Real-time activity stream with SSE connection
+- `TrendingList` - Trending/popular/hot content with period selector
+
+### Files Added (Social Engagement)
+- `server/engagement.ts` - Engagement utilities (IP hashing, rate limiting, hotness calculation)
+- `server/engagement.test.ts` - 65 property-based tests for engagement features
+- `server/sse.ts` - Server-Sent Events broadcaster for real-time updates
+- `client/src/components/VoteButtons.tsx`
+- `client/src/components/PopularityMetrics.tsx`
+- `client/src/components/ActivityFeed.tsx`
+- `client/src/components/TrendingList.tsx`
+
+### Database Schema Extensions
+- `votes` table - Track thumbs up/down per media file with IP hash
+- `playLogs` table - Detailed play event tracking
+- `downloadLogs` table - Download event tracking
+- `viewLogs` table - View event tracking
+- `activityFeed` table - Platform activity stream
+- Added engagement columns to `mediaFiles`: playCount, downloadCount, viewCount, upvotes, downvotes, hotnessScore
+
+## Recent Changes (December 2025)
+
+### Category-Level Playlist Functionality
+- **Enhanced MusicPlayerContext**: Added full playlist state management with queue, shuffle mode, loop mode, and auto-advance
+- **Skip Controls**: Added skip previous/next buttons to the music player bar
+- **Shuffle Mode**: Toggle to randomize track order while preserving current playback position
+- **Loop Mode**: Automatically restart playlist when it ends
+- **Queue Position Indicator**: Shows current track position in the playlist (e.g., "2/10")
+- **Play All / Shuffle Buttons**: CategoryView now includes "Play All" for sequential playback and "Shuffle" for randomized playback
+- **Auto-advance**: When a track ends, the next track in the queue plays automatically
+
+### Dashboard Tab Reorganization
+- **Restructured Dashboard Tabs**: Moved Live Activity and Trending to a separate "Activity" tab
+- **My Sections as Default**: My Sections is now the default first tab on the dashboard
 
 ### Vercel Deployment Configuration
 - **Added `vercel.json`**: Configured Vercel deployment with proper build commands, output directory, and URL rewrites
@@ -13,7 +63,12 @@ A comprehensive media management and distribution platform with secure admin acc
 - **Removed Umami analytics script**: Cleaned up `client/index.html` to remove unused analytics that caused console errors
 - **Simplified login URL**: Updated `client/src/const.ts` to return `/login` directly instead of constructing OAuth URLs with undefined environment variables
 
-### Files Modified
+### Files Modified (Playlist Feature)
+- `client/src/contexts/MusicPlayerContext.tsx` - Added playlist state and control functions
+- `client/src/components/MusicPlayer.tsx` - Added skip, shuffle, and loop controls
+- `client/src/pages/CategoryView.tsx` - Added Play All and Shuffle buttons
+
+### Files Modified (Infrastructure)
 - `vercel.json` (new)
 - `api/index.ts` (new)
 - `tsconfig.json`
@@ -30,11 +85,25 @@ A comprehensive media management and distribution platform with secure admin acc
 - **Public Sharing**: Generate shareable links for songs/videos that work without login
 - **Media Player**: Built-in audio and video player with streaming support
 
+### Playlist Features
+- **Sequential Playback**: Play all tracks in a category in order with "Play All" button
+- **Shuffle Mode**: Randomize track order with intelligent reshuffling that preserves current track
+- **Loop Mode**: Continuous playback - automatically restart playlist when it ends
+- **Skip Controls**: Previous/next track buttons in the player bar
+- **Queue Position Indicator**: Visual feedback showing current position (e.g., "3/15")
+- **Auto-advance**: Seamlessly plays the next track when the current one ends
+- **Persistent Player**: Music continues playing across page navigation
+
 ### Social Features
 - **5-Star Rating System**: Rate tracks with average rating display
+- **Thumbs Up/Down Voting**: Express opinions on media files with animated feedback
 - **Threaded Comments**: Engage with nested comment threads
 - **Collaborative Tagging**: Add, edit, and discover content through user-generated tags
 - **Tag Cloud Visualization**: Browse content by popular tags
+- **Real-time Activity Feed**: See live platform activity (plays, downloads, uploads, votes)
+- **Trending Content**: Discover content with highest engagement velocity
+- **Popular Content**: Browse most-played content with time filters
+- **Hot Content**: Content ranked by weighted engagement score
 
 ### Distribution Tools
 - **Metadata Builder**: Comprehensive metadata editor for distribution
@@ -304,6 +373,19 @@ Tests cover:
 - Section and category management
 - Media file operations
 - API endpoints
+- **Social engagement features (65 property-based tests)**:
+  - Vote recording and count updates
+  - Vote uniqueness per IP/media file
+  - Vote modification round-trip
+  - Event log data completeness
+  - Engagement metrics in responses
+  - Play count time-period filtering
+  - Hotness score calculation
+  - Trending/popular list ordering
+  - Activity feed creation and recency
+  - Rate limiting enforcement
+  - IP hashing for privacy
+  - API error message descriptiveness
 
 ## Additional Documentation
 

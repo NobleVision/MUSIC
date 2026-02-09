@@ -1,6 +1,27 @@
 # Music Hosting Platform TODO
 
-## Recently Completed (December 2024)
+## Recently Completed (January 2026)
+
+### Social Engagement Features
+- [x] Voting system (thumbs up/down) with IP-based uniqueness
+- [x] Play count tracking (on playback completion or 30-second threshold)
+- [x] Download count tracking with detailed logging
+- [x] View count tracking for media detail pages
+- [x] Trending content algorithm (engagement velocity in last 24h)
+- [x] Popular content lists with time period filters (24h, 7d, 30d, all-time)
+- [x] Hot content ranking (weighted engagement with time decay)
+- [x] Real-time activity feed with Server-Sent Events
+- [x] Rate limiting (10 votes/min, 100 plays/hr per IP)
+- [x] IP hashing for privacy (SHA-256)
+- [x] VoteButtons component with animated count updates
+- [x] PopularityMetrics component (compact and full modes)
+- [x] ActivityFeed component with SSE real-time updates
+- [x] TrendingList component with period selector
+- [x] Database schema extensions (votes, playLogs, downloadLogs, viewLogs, activityFeed tables)
+- [x] Engagement columns on mediaFiles (playCount, downloadCount, viewCount, upvotes, downvotes, hotnessScore)
+- [x] 65 property-based tests for engagement features (all passing)
+
+## Recently Completed (December 2025)
 
 ### Infrastructure & Deployment
 - [x] Vercel deployment configuration (`vercel.json`)
@@ -42,6 +63,13 @@
 - [x] Shuffle button at category level
 - [x] Audio player integration
 - [x] Video player integration
+- [x] Category-level playlist functionality with sequential playback
+- [x] Shuffle mode with intelligent track reordering
+- [x] Loop mode for continuous playlist playback
+- [x] Skip controls (previous/next track) in music player
+- [x] Queue position indicator in player bar
+- [x] Auto-advance to next track when current track ends
+- [x] Persistent music player across page navigation
 
 ### Social Features
 - [x] 5-star rating system for songs
@@ -80,6 +108,21 @@
 - [x] Vitest tests for social features
 - [x] Vitest tests for API endpoints
 - [x] Vitest tests for distribution workflow
+- [x] Property-based tests for social engagement (65 tests)
+  - [x] Vote recording and count updates (Property 1)
+  - [x] Vote uniqueness per IP/media file (Property 2)
+  - [x] Vote modification round-trip (Property 3)
+  - [x] Event log data completeness (Property 4)
+  - [x] Engagement metrics in responses (Property 5)
+  - [x] Play count time-period filtering (Property 6)
+  - [x] Hotness score calculation (Property 7)
+  - [x] Trending list ordering (Property 8)
+  - [x] Popular list ordering (Property 9)
+  - [x] Activity feed creation (Property 10)
+  - [x] Activity feed recency/limit (Property 11)
+  - [x] Rate limiting enforcement (Property 12)
+  - [x] IP hashing for privacy (Property 13)
+  - [x] API error descriptiveness (Property 14)
 
 ---
 
@@ -89,12 +132,16 @@
 - [ ] Verify Vercel deployment works end-to-end after configuration changes
 - [ ] Test all API endpoints in production environment
 - [ ] Ensure environment variables are properly configured in Vercel dashboard
+- [ ] Fix pre-existing test failures in `auth.test.ts` (credential configuration)
+- [ ] Fix pre-existing test failures in `sections.test.ts` (database availability in tests)
 
 ### Medium Priority - Infrastructure
 - [ ] Set up error monitoring (Sentry or similar)
 - [ ] Configure proper logging for serverless functions
-- [ ] Add rate limiting to API endpoints
+- [x] Add rate limiting to API endpoints (implemented for engagement features)
 - [ ] Implement CORS configuration for API security
+- [ ] Add scheduled job for hotness score recalculation (currently on-demand)
+- [ ] Add activity feed pruning job (keep last 1000 items)
 
 ---
 
@@ -108,22 +155,33 @@
 - [ ] Error handling and retry for failed uploads
 - [ ] Preview and validation before final import
 
-### Playlist Management
-- [ ] Create custom playlists spanning multiple categories
-- [ ] Add/remove tracks from playlists
+### Playlist Management (Enhanced)
+- [x] Category-level playlist with sequential playback
+- [x] Shuffle mode with intelligent track reordering
+- [x] Loop mode for continuous playback
+- [x] Skip previous/next controls
+- [x] Auto-advance to next track
+- [ ] Cross-category playlists (create custom playlists spanning multiple categories)
+- [ ] Playlist persistence across browser sessions (localStorage/database)
+- [ ] Keyboard shortcuts for playlist controls (space, arrow keys, etc.)
+- [ ] Visual queue/playlist viewer component (see upcoming tracks)
+- [ ] Add/remove individual tracks from active queue
 - [ ] Reorder playlist tracks with drag-and-drop
-- [ ] Share playlists publicly
+- [ ] Share playlists publicly with shareable links
 - [ ] Collaborative playlists (multiple users can contribute)
 - [ ] Smart playlists based on tags, ratings, or genres
+- [ ] "Add to queue" option on individual track cards
+- [ ] Shuffle remaining tracks only (preserve played history)
 
 ### Analytics Dashboard
-- [ ] Track play counts per media file
-- [ ] View most popular tracks by plays
-- [ ] User engagement metrics (comments, ratings, shares)
-- [ ] Time-based analytics (daily, weekly, monthly trends)
+- [x] Track play counts per media file
+- [x] View most popular tracks by plays
+- [x] User engagement metrics (votes, plays, downloads, views)
+- [x] Real-time activity feed with live updates
+- [ ] Time-based analytics charts (daily, weekly, monthly trends)
 - [ ] Geographic distribution of listeners (if available)
 - [ ] Export analytics reports to CSV/PDF
-- [ ] Real-time analytics dashboard with charts
+- [ ] Analytics dashboard page with visualizations
 
 ### Additional Features
 - [ ] Search functionality across all media files
@@ -141,6 +199,18 @@
 - [ ] Collaborative editing of metadata
 - [ ] Version history for tracks (upload new versions)
 - [ ] Scheduled publishing for future releases
+
+### Social Engagement Enhancements
+- [ ] User accounts for persistent voting (currently IP-based)
+- [ ] Comment voting (upvote/downvote comments)
+- [ ] Notification system for engagement on your content
+- [ ] Weekly/monthly trending charts
+- [ ] Engagement leaderboards
+- [ ] Social sharing buttons (Twitter, Facebook, etc.)
+- [ ] Embed player widget for external sites
+- [ ] Activity feed filtering by type
+- [ ] Personalized recommendations based on engagement history
+- [ ] Geographic location display in activity feed (from IP geolocation)
 
 ---
 
@@ -165,20 +235,26 @@
 
 ### Short-term (1-2 Weeks)
 
-1. **Performance Optimization**
-   - Code-split large bundles (currently 585KB)
+1. **Playlist Enhancements**
+   - Add keyboard shortcuts for playlist controls (space, arrows, etc.)
+   - Persist playlist/queue state to localStorage for session recovery
+   - Add visual queue viewer to see upcoming tracks
+   - Add "Add to queue" option on individual media file cards
+
+2. **Performance Optimization**
+   - Code-split large bundles (currently ~1.1MB after playlist features)
    - Lazy load heavy components
    - Optimize Cloudinary image delivery
 
-2. **User Experience**
+3. **User Experience**
    - Add loading states and skeletons
    - Improve error messages
-   - Add keyboard navigation
+   - Add keyboard navigation for player and playlist
 
-3. **Testing**
+4. **Testing**
+   - Add tests for playlist functionality
    - Add integration tests for critical flows
    - Test serverless function cold starts
-   - Load testing for concurrent users
 
 ### Medium-term (1-2 Months)
 
@@ -186,10 +262,11 @@
    - Implement search functionality
    - Add bulk upload capability
    - Build analytics dashboard
+   - Cross-category custom playlists
 
 2. **Mobile Experience**
    - Responsive design audit
-   - Touch-friendly controls
+   - Touch-friendly controls for playlist
    - Progressive Web App (PWA) setup
 
 3. **API Expansion**
