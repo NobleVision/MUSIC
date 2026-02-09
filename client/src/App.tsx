@@ -7,6 +7,7 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import { MusicPlayerProvider } from "./contexts/MusicPlayerContext";
 import MusicPlayer from "./components/MusicPlayer";
 import VideoBackgroundOverlay from "./components/VideoBackgroundOverlay";
+import VideoPlayerOverlay from "./components/VideoPlayerOverlay";
 import { Loader2 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useCallback, ReactNode } from "react";
@@ -103,6 +104,7 @@ function App() {
           <TooltipProvider>
             <Toaster />
             <VideoBackgroundOverlay />
+            <VideoPlayerOverlay />
             <Router />
             <MusicPlayer />
           </TooltipProvider>

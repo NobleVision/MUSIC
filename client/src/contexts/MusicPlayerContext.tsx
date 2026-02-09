@@ -56,8 +56,14 @@ interface MusicPlayerContextType extends MusicPlayerState {
   /** Video background state and controls */
   videoBackground: VideoBackgroundState;
   toggleVideoBackground: () => void;
-  /** Whether video should currently be shown (enabled + playing + not reduced motion) */
+  /** Whether decorative video background should show (only for audio tracks) */
   shouldShowVideoBackground: boolean;
+  /** Whether the current track is a video file */
+  isVideoTrack: boolean;
+  /** Register a video element for video track playback */
+  registerVideoElement: (element: HTMLVideoElement) => void;
+  /** Unregister the video element */
+  unregisterVideoElement: () => void;
   /** Playlist functionality */
   playlist: PlaylistState;
   /** Play all tracks from an array of media files */
@@ -134,6 +140,7 @@ function shuffleArray<T>(array: T[]): T[] {
 
 export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerProviderProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const [state, setState] = useState<MusicPlayerState>({
     currentTrack: null,
     isPlaying: false,
@@ -142,6 +149,9 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
     duration: 0,
     isLoading: false,
   });
+
+  // Track whether video element is registered (for video playback)
+  const [hasVideoElement, setHasVideoElement] = useState(false);
 
   // Playlist state
   const [playlist, setPlaylist] = useState<PlaylistState>({
@@ -296,27 +306,146 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty deps - only run once on mount
 
-  const play = useCallback((track: Track) => {
-    const audio = audioRef.current;
-    if (!audio) return;
+  // Register/unregister video element (called by VideoPlayerOverlay)
+  const registerVideoElement = useCallback((element: HTMLVideoElement) => {
+    videoRef.current = element;
+    setHasVideoElement(true);
 
+    // Set up event listeners for video element
+    const handleTimeUpdate = () => {
+      setState(s => ({ ...s, currentTime: element.currentTime }));
+
+      // Check if we should record a play (threshold reached)
+      const callback = onPlayRecordedRef.current;
+      const duration = element.duration || 0;
+      if (
+        !hasRecordedPlayRef.current &&
+        currentTrackIdRef.current !== null &&
+        duration > 0 &&
+        callback
+      ) {
+        const playDuration = element.currentTime - playStartTimeRef.current;
+        const thresholdReached =
+          playDuration >= PLAY_THRESHOLD_SECONDS ||
+          element.currentTime / duration >= PLAY_THRESHOLD_PERCENTAGE;
+
+        if (thresholdReached) {
+          hasRecordedPlayRef.current = true;
+          callback(currentTrackIdRef.current, Math.round(playDuration));
+        }
+      }
+    };
+
+    const handleDurationChange = () => {
+      setState(s => ({ ...s, duration: element.duration || 0 }));
+    };
+
+    const handleEnded = () => {
+      // Record play on track end if not already recorded
+      const callback = onPlayRecordedRef.current;
+      if (
+        !hasRecordedPlayRef.current &&
+        currentTrackIdRef.current !== null &&
+        callback
+      ) {
+        const playDuration = element.currentTime - playStartTimeRef.current;
+        callback(currentTrackIdRef.current, Math.round(playDuration));
+        hasRecordedPlayRef.current = true;
+      }
+
+      // Call onTrackEnded to handle playlist progression
+      const onEnded = onTrackEndedRef.current;
+      if (onEnded) {
+        onEnded();
+      } else {
+        setState(s => ({ ...s, isPlaying: false, currentTime: 0 }));
+      }
+    };
+
+    const handleLoadStart = () => {
+      setState(s => ({ ...s, isLoading: true }));
+    };
+
+    const handleCanPlay = () => {
+      setState(s => ({ ...s, isLoading: false }));
+    };
+
+    const handleError = (e: Event) => {
+      console.error("[MusicPlayer] Video error:", e);
+      setState(s => ({ ...s, isPlaying: false, isLoading: false }));
+    };
+
+    element.addEventListener("timeupdate", handleTimeUpdate);
+    element.addEventListener("durationchange", handleDurationChange);
+    element.addEventListener("ended", handleEnded);
+    element.addEventListener("loadstart", handleLoadStart);
+    element.addEventListener("canplay", handleCanPlay);
+    element.addEventListener("error", handleError);
+
+    // Store cleanup function
+    (element as HTMLVideoElement & { _cleanup?: () => void })._cleanup = () => {
+      element.removeEventListener("timeupdate", handleTimeUpdate);
+      element.removeEventListener("durationchange", handleDurationChange);
+      element.removeEventListener("ended", handleEnded);
+      element.removeEventListener("loadstart", handleLoadStart);
+      element.removeEventListener("canplay", handleCanPlay);
+      element.removeEventListener("error", handleError);
+    };
+  }, []);
+
+  const unregisterVideoElement = useCallback(() => {
+    const element = videoRef.current;
+    if (element) {
+      // Call cleanup function
+      const cleanup = (element as HTMLVideoElement & { _cleanup?: () => void })._cleanup;
+      if (cleanup) cleanup();
+    }
+    videoRef.current = null;
+    setHasVideoElement(false);
+  }, []);
+
+  const play = useCallback((track: Track) => {
     // Reset play tracking for new track
     playStartTimeRef.current = 0;
     hasRecordedPlayRef.current = false;
     currentTrackIdRef.current = track.id;
 
-    audio.src = track.fileUrl;
-    audio.load();
-    audio.play().catch(err => {
-      console.error("[MusicPlayer] Failed to play:", err);
-    });
-    
-    setState(s => ({
-      ...s,
-      currentTrack: track,
-      isPlaying: true,
-      currentTime: 0,
-    }));
+    // For video tracks, we set state and let VideoPlayerOverlay handle playback
+    // For audio tracks, we use the audio element
+    if (track.mediaType === "video") {
+      // Stop audio if it was playing
+      const audio = audioRef.current;
+      if (audio) {
+        audio.pause();
+        audio.src = "";
+      }
+
+      // Set state - the VideoPlayerOverlay will detect this and start playback
+      setState(s => ({
+        ...s,
+        currentTrack: track,
+        isPlaying: true,
+        currentTime: 0,
+        duration: 0,
+      }));
+    } else {
+      // Audio track - use audio element
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      audio.src = track.fileUrl;
+      audio.load();
+      audio.play().catch(err => {
+        console.error("[MusicPlayer] Failed to play:", err);
+      });
+
+      setState(s => ({
+        ...s,
+        currentTrack: track,
+        isPlaying: true,
+        currentTime: 0,
+      }));
+    }
   }, []);
 
   const playMediaFile = useCallback((mediaFile: MediaFile) => {
@@ -331,21 +460,36 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
     });
   }, [play]);
 
+  // Helper to get the active media element (audio or video based on current track)
+  const getActiveElement = useCallback((): HTMLAudioElement | HTMLVideoElement | null => {
+    if (state.currentTrack?.mediaType === "video") {
+      return videoRef.current;
+    }
+    return audioRef.current;
+  }, [state.currentTrack?.mediaType]);
+
   const pause = useCallback(() => {
-    audioRef.current?.pause();
+    const element = state.currentTrack?.mediaType === "video" ? videoRef.current : audioRef.current;
+    element?.pause();
     setState(s => ({ ...s, isPlaying: false }));
-  }, []);
+  }, [state.currentTrack?.mediaType]);
 
   const resume = useCallback(() => {
-    audioRef.current?.play().catch(console.error);
+    const element = state.currentTrack?.mediaType === "video" ? videoRef.current : audioRef.current;
+    element?.play().catch(console.error);
     setState(s => ({ ...s, isPlaying: true }));
-  }, []);
+  }, [state.currentTrack?.mediaType]);
 
   const stop = useCallback(() => {
     const audio = audioRef.current;
+    const video = videoRef.current;
     if (audio) {
       audio.pause();
       audio.currentTime = 0;
+    }
+    if (video) {
+      video.pause();
+      video.currentTime = 0;
     }
     setState(s => ({ ...s, isPlaying: false, currentTime: 0, currentTrack: null }));
   }, []);
@@ -354,15 +498,19 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
     if (audioRef.current) {
       audioRef.current.volume = volume;
     }
+    if (videoRef.current) {
+      videoRef.current.volume = volume;
+    }
     setState(s => ({ ...s, volume }));
   }, []);
 
   const seek = useCallback((time: number) => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = time;
+    const element = state.currentTrack?.mediaType === "video" ? videoRef.current : audioRef.current;
+    if (element) {
+      element.currentTime = time;
     }
     setState(s => ({ ...s, currentTime: time }));
-  }, []);
+  }, [state.currentTrack?.mediaType]);
 
   const togglePlay = useCallback(() => {
     if (state.isPlaying) {
@@ -422,8 +570,9 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
     if (queue.length === 0) return;
 
     // If we're more than 3 seconds into the track, restart it
-    if (audioRef.current && audioRef.current.currentTime > 3) {
-      audioRef.current.currentTime = 0;
+    const element = state.currentTrack?.mediaType === "video" ? videoRef.current : audioRef.current;
+    if (element && element.currentTime > 3) {
+      element.currentTime = 0;
       return;
     }
 
@@ -433,7 +582,7 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
     }
 
     playTrackAtIndex(prevIndex, queue);
-  }, [playTrackAtIndex, playlist.loopMode]);
+  }, [playTrackAtIndex, playlist.loopMode, state.currentTrack?.mediaType]);
 
   // Set up the onTrackEnded callback to use skipNext
   useEffect(() => {
@@ -526,12 +675,17 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
 
   const isPlayerVisible = state.currentTrack !== null;
 
-  // Show video background when: enabled + music playing + not reduced motion
+  // Check if current track is a video
+  const isVideoTrack = state.currentTrack?.mediaType === "video";
+
+  // Show decorative video background when: enabled + audio playing + not reduced motion + not a video track
+  // For video tracks, we show the actual video content via VideoPlayerOverlay, not the b-roll
   const shouldShowVideoBackground =
     videoBackground.enabled &&
     state.isPlaying &&
     !prefersReducedMotion &&
-    videoBackground.currentVideoUrl !== null;
+    videoBackground.currentVideoUrl !== null &&
+    !isVideoTrack;
 
   return (
     <MusicPlayerContext.Provider value={{
@@ -548,6 +702,9 @@ export function MusicPlayerProvider({ children, onPlayRecorded }: MusicPlayerPro
       videoBackground,
       toggleVideoBackground,
       shouldShowVideoBackground,
+      isVideoTrack,
+      registerVideoElement,
+      unregisterVideoElement,
       playlist,
       playPlaylist,
       toggleShuffle,
