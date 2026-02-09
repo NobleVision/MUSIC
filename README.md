@@ -2,6 +2,34 @@
 
 A comprehensive media management and distribution platform with secure admin access, hierarchical organization, social features, and public sharing capabilities.
 
+## Recent Changes (February 2026)
+
+### Video Player Overlay with Social Engagement
+- **Video Playback Fix**: Dashboard video playback now shows actual uploaded video content instead of decorative b-roll background. Audio tracks continue to show the b-roll overlay as before.
+- **VideoPlayerOverlay Component**: New fullscreen/minimizable video player overlay with playback controls, registered with MusicPlayerContext for coordinated play/pause/seek/volume
+- **View Count Tracking**: Automatically records a view (via `engagement.recordView`) when a video starts playing in the overlay, once per track per session
+- **Vote Buttons**: Integrated thumbs up/down voting directly in the video player overlay using the existing `VoteButtons` component
+- **Threaded Comments**: Full comment section with reply support, matching the MediaDetail page implementation
+- **Popularity Metrics**: Compact display of plays, downloads, views, and votes using the existing `PopularityMetrics` component
+- **Engagement Panel Toggle**: A toggle button (💬) in the top-right controls shows/hides the engagement panel below the video in maximized mode; hidden entirely in minimized mode
+- **Dark Theme UI**: Engagement panel uses translucent dark backgrounds (`bg-white/10 backdrop-blur-sm`) with light text to match the video overlay aesthetic
+
+### Chunked Video Uploads
+- **Large File Support**: Files over 95MB are automatically uploaded in 20MB chunks using Cloudinary's chunked upload API (`Content-Range` + `X-Unique-Upload-Id` headers)
+- **Increased Upload Limit**: Client-side max video size increased from 100MB to 250MB (requires Cloudinary Plus plan or higher)
+- **Extended Timeout**: Upload timeout increased to 15 minutes for large files
+- **Progress Tracking**: Upload progress updates across all chunks
+
+### New/Modified Components
+- `VideoPlayerOverlay` - Video player with social engagement features (view tracking, votes, comments, metrics)
+- `MusicPlayerContext` - Extended to support video element registration, `isVideoTrack` state, and dual audio/video playback routing
+
+### Files Modified (Video Player & Engagement)
+- `client/src/components/VideoPlayerOverlay.tsx` (new) - Video overlay with engagement features
+- `client/src/contexts/MusicPlayerContext.tsx` - Added video element support and `isVideoTrack` routing
+- `client/src/App.tsx` - Added `VideoPlayerOverlay` to component tree
+- `client/src/lib/storage.ts` - Chunked upload implementation, increased limits
+
 ## Recent Changes (January 2026)
 
 ### Social Engagement Features (NEW)

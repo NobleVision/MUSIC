@@ -1,18 +1,83 @@
+import { useEffect, useState } from "react";
 import { useRoute } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { FileAudio, FileVideo, Download, Loader2, AlertCircle } from "lucide-react";
+import { useAuth } from "@/_core/hooks/useAuth";
+import { FileAudio, FileVideo, Download, Loader2, AlertCircle, Send } from "lucide-react";
+import { toast } from "sonner";
+import VoteButtons from "@/components/VoteButtons";
+import PopularityMetrics from "@/components/PopularityMetrics";
 
 export default function ShareView() {
   const [, params] = useRoute("/share/:token");
   const shareToken = params?.token || "";
-  
-  const { data: mediaFile, isLoading, error } = trpc.media.getByShareToken.useQuery(
+  const { user } = useAuth();
+
+  const [commentText, setCommentText] = useState("");
+  const [replyTo, setReplyTo] = useState<number | null>(null);
+
+  const { data: mediaFile, isLoading, error, refetch: refetchMedia } = trpc.media.getByShareToken.useQuery(
     { shareToken },
     { enabled: !!shareToken }
   );
-  
+
+  const mediaId = mediaFile?.id || 0;
+
+  // Fetch comments
+  const { data: comments, refetch: refetchComments } = trpc.comments.list.useQuery(
+    { mediaFileId: mediaId },
+    { enabled: mediaId > 0 }
+  );
+
+  // Record view on page load
+  const recordViewMutation = trpc.engagement.recordView.useMutation();
+  useEffect(() => {
+    if (mediaId > 0) {
+      recordViewMutation.mutate({ mediaFileId: mediaId });
+    }
+  }, [mediaId]);
+
+  // Record download
+  const recordDownloadMutation = trpc.engagement.recordDownload.useMutation({
+    onSuccess: () => refetchMedia(),
+  });
+
+  const handleDownload = () => {
+    if (mediaFile) {
+      recordDownloadMutation.mutate({ mediaFileId: mediaId });
+      window.open(mediaFile.fileUrl, '_blank');
+    }
+  };
+
+  // Comment mutation
+  const commentMutation = trpc.comments.create.useMutation({
+    onSuccess: () => {
+      toast.success("Comment posted!");
+      setCommentText("");
+      setReplyTo(null);
+      refetchComments();
+      refetchMedia();
+    },
+  });
+
+  const handleComment = () => {
+    if (!user) {
+      toast.error("Please log in to comment");
+      return;
+    }
+    if (!commentText.trim()) {
+      toast.error("Please enter a comment");
+      return;
+    }
+    commentMutation.mutate({
+      mediaFileId: mediaId,
+      content: commentText,
+      parentCommentId: replyTo || undefined,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50">
@@ -20,7 +85,7 @@ export default function ShareView() {
       </div>
     );
   }
-  
+
   if (error || !mediaFile) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-blue-50 p-4">
@@ -36,18 +101,19 @@ export default function ShareView() {
       </div>
     );
   }
-  
+
   const Icon = mediaFile.mediaType === "audio" ? FileAudio : FileVideo;
-  
+  const topLevelComments = comments?.filter(c => !c.parentCommentId) || [];
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4">
-      <div className="container max-w-4xl mx-auto py-12">
+      <div className="container max-w-4xl mx-auto py-12 space-y-6">
         <Card>
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
               {mediaFile.coverArtUrl ? (
-                <img 
-                  src={mediaFile.coverArtUrl} 
+                <img
+                  src={mediaFile.coverArtUrl}
                   alt={mediaFile.title}
                   className="w-48 h-48 rounded-lg object-cover shadow-lg"
                 />
@@ -79,7 +145,40 @@ export default function ShareView() {
                 )}
               </div>
             )}
-            
+
+            {/* Vote Buttons */}
+            <div className="flex justify-center">
+              <VoteButtons
+                mediaFileId={mediaId}
+                initialUpvotes={mediaFile.upvotes}
+                initialDownvotes={mediaFile.downvotes}
+                size="md"
+              />
+            </div>
+
+            {/* Download Button */}
+            {mediaFile.allowDownload && (
+              <div className="flex justify-center">
+                <Button
+                  size="lg"
+                  onClick={handleDownload}
+                >
+                  <Download className="w-5 h-5 mr-2" />
+                  Download File
+                </Button>
+              </div>
+            )}
+
+            {/* Popularity Metrics */}
+            <PopularityMetrics
+              playCount={mediaFile.playCount}
+              downloadCount={mediaFile.downloadCount}
+              viewCount={mediaFile.viewCount}
+              upvotes={mediaFile.upvotes}
+              downvotes={mediaFile.downvotes}
+              compact
+            />
+
             {/* Lyrics */}
             {mediaFile.lyrics && (
               <div>
@@ -89,20 +188,7 @@ export default function ShareView() {
                 </div>
               </div>
             )}
-            
-            {/* Download Button */}
-            {mediaFile.allowDownload && (
-              <div className="flex justify-center">
-                <Button 
-                  size="lg"
-                  onClick={() => window.open(mediaFile.fileUrl, '_blank')}
-                >
-                  <Download className="w-5 h-5 mr-2" />
-                  Download File
-                </Button>
-              </div>
-            )}
-            
+
             {/* Metadata */}
             <div className="border-t pt-4 text-sm text-gray-600">
               <div className="grid grid-cols-2 gap-2">
@@ -115,6 +201,102 @@ export default function ShareView() {
                   </div>
                 )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Comments Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Comments ({comments?.length || 0})</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Comment Input */}
+            {user ? (
+              <>
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder={replyTo ? "Write a reply..." : "Write a comment..."}
+                    value={commentText}
+                    onChange={(e) => setCommentText(e.target.value)}
+                    rows={3}
+                  />
+                  <Button onClick={handleComment} disabled={commentMutation.isPending}>
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+                {replyTo && (
+                  <div className="text-sm text-gray-600">
+                    Replying to comment...{" "}
+                    <Button size="sm" variant="link" onClick={() => setReplyTo(null)}>Cancel</Button>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center py-3 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-500">Log in to leave a comment</p>
+              </div>
+            )}
+
+            {/* Comments List */}
+            <div className="space-y-4">
+              {topLevelComments.map((comment) => {
+                const replies = comments?.filter(c => c.parentCommentId === comment.id) || [];
+                return (
+                  <div key={comment.id} className="border-l-2 border-gray-200 pl-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                        {comment.userName?.charAt(0) || "U"}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-sm">{comment.userName || "User"}</span>
+                          <span className="text-xs text-gray-500">
+                            {new Date(comment.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700 mb-2">{comment.content}</p>
+                        {user && (
+                          <Button
+                            size="sm"
+                            variant="link"
+                            className="h-auto p-0 text-xs"
+                            onClick={() => setReplyTo(comment.id)}
+                          >
+                            Reply
+                          </Button>
+                        )}
+
+                        {/* Replies */}
+                        {replies.length > 0 && (
+                          <div className="mt-3 space-y-3">
+                            {replies.map((reply) => (
+                              <div key={reply.id} className="flex items-start gap-2">
+                                <div className="w-6 h-6 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                  {reply.userName?.charAt(0) || "U"}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-xs">{reply.userName || "User"}</span>
+                                    <span className="text-xs text-gray-500">
+                                      {new Date(reply.createdAt).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-700">{reply.content}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {topLevelComments.length === 0 && (
+                <p className="text-center text-gray-500 py-8">No comments yet. Be the first to comment!</p>
+              )}
             </div>
           </CardContent>
         </Card>

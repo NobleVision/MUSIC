@@ -1,5 +1,27 @@
 # Music Hosting Platform TODO
 
+## Recently Completed (February 2026)
+
+### Video Player Overlay with Social Engagement
+- [x] Dashboard video playback fix (actual content instead of decorative b-roll)
+- [x] VideoPlayerOverlay component with minimize/maximize and close controls
+- [x] MusicPlayerContext extended with video element registration (`registerVideoElement`, `unregisterVideoElement`)
+- [x] Dual audio/video playback routing via `isVideoTrack` state
+- [x] View count tracking fires when video starts playing (once per track per session)
+- [x] Vote buttons (thumbs up/down) integrated into video player overlay
+- [x] Threaded comments section with reply support in video overlay
+- [x] Popularity metrics display (plays, downloads, views, votes) in compact mode
+- [x] Engagement panel toggle button (💬) — shows/hides engagement UI in maximized mode, hidden in minimized mode
+- [x] Dark theme engagement UI with translucent backgrounds and light text
+
+### Chunked Video Uploads
+- [x] Chunked upload implementation for files over 95MB (20MB chunks)
+- [x] `Content-Range` and `X-Unique-Upload-Id` header support for Cloudinary chunked API
+- [x] Client-side max video size increased to 250MB (requires Cloudinary Plus plan)
+- [x] Upload timeout extended to 15 minutes for large files
+- [x] Progress tracking across all upload chunks
+- [x] Upload signature fix (`overwrite` parameter type mismatch between server and client)
+
 ## Recently Completed (January 2026)
 
 ### Social Engagement Features
@@ -211,6 +233,20 @@
 - [ ] Activity feed filtering by type
 - [ ] Personalized recommendations based on engagement history
 - [ ] Geographic location display in activity feed (from IP geolocation)
+
+### Video Player Overlay Enhancements
+- [ ] Keyboard shortcut to toggle engagement panel (e.g., `E` key)
+- [ ] Persistent engagement panel state across tracks (localStorage)
+- [ ] Mobile-responsive video overlay layout (touch-friendly controls)
+- [ ] Swipe gestures for minimized video player (swipe up to maximize, swipe down to dismiss)
+- [ ] Picture-in-picture (PiP) mode support for video playback
+- [ ] Comment sorting options (newest, oldest, most replies)
+- [ ] Real-time comment updates via Server-Sent Events
+- [ ] Video quality selector (if Cloudinary adaptive streaming is enabled)
+- [ ] Playback speed controls (0.5x, 1x, 1.25x, 1.5x, 2x)
+- [ ] Video timestamp comments (link comments to specific moments in the video)
+- [ ] Engagement panel animations/transitions (slide in/out)
+- [ ] Share button in video overlay to generate public share link
 
 ---
 
