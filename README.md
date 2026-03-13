@@ -20,15 +20,26 @@ A comprehensive media management and distribution platform with secure admin acc
 - **Extended Timeout**: Upload timeout increased to 15 minutes for large files
 - **Progress Tracking**: Upload progress updates across all chunks
 
+### Public Share Page Engagement
+- **Social Features on Shared Links**: The public share page (`/share/:token`) now includes full social engagement features for anonymous visitors
+- **View Tracking**: Automatically records a view when the shared page loads
+- **Download Tracking**: Download button click records a download event before opening the file
+- **Vote Buttons**: Anonymous users can upvote/downvote via IP-based uniqueness (no login required)
+- **Popularity Metrics**: Compact display of plays, downloads, views, and votes below the media player
+- **Comments Section**: Anonymous users can read all threaded comments; logged-in users can post comments and replies
+- **Login Prompt**: Non-authenticated visitors see a "Log in to leave a comment" prompt instead of the comment input
+
 ### New/Modified Components
 - `VideoPlayerOverlay` - Video player with social engagement features (view tracking, votes, comments, metrics)
 - `MusicPlayerContext` - Extended to support video element registration, `isVideoTrack` state, and dual audio/video playback routing
+- `ShareView` - Public share page updated with VoteButtons, PopularityMetrics, comments, view/download tracking
 
 ### Files Modified (Video Player & Engagement)
 - `client/src/components/VideoPlayerOverlay.tsx` (new) - Video overlay with engagement features
 - `client/src/contexts/MusicPlayerContext.tsx` - Added video element support and `isVideoTrack` routing
 - `client/src/App.tsx` - Added `VideoPlayerOverlay` to component tree
 - `client/src/lib/storage.ts` - Chunked upload implementation, increased limits
+- `client/src/pages/ShareView.tsx` - Added engagement features to public share page
 
 ## Recent Changes (January 2026)
 

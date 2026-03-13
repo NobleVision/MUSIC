@@ -22,6 +22,15 @@
 - [x] Progress tracking across all upload chunks
 - [x] Upload signature fix (`overwrite` parameter type mismatch between server and client)
 
+### Public Share Page Engagement
+- [x] VoteButtons integrated into public share page (anonymous voting via IP)
+- [x] PopularityMetrics (compact) showing plays, downloads, views, votes on shared links
+- [x] Threaded comments section on public share page (read-only for anonymous, input for logged-in users)
+- [x] Login prompt for anonymous visitors in place of comment input
+- [x] View tracking fires on shared page load via `engagement.recordView`
+- [x] Download tracking via `engagement.recordDownload` when download button is clicked
+- [x] Reply button only shown to logged-in users on public share page
+
 ## Recently Completed (January 2026)
 
 ### Social Engagement Features

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\\\Dat\\\\@Scripts\\\\@NOBLEVISION\\\\@MUSIC\" && pnpm check 2>&1)",
+      "Bash(cd \"C:\\\\Dat\\\\@Scripts\\\\@NOBLEVISION\\\\@MUSIC\" && pnpm test 2>&1)"
+    ]
+  }
+}

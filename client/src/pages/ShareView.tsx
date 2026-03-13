@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRoute } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,13 +31,52 @@ export default function ShareView() {
     { enabled: mediaId > 0 }
   );
 
-  // Record view on page load
-  const recordViewMutation = trpc.engagement.recordView.useMutation();
+  // Record view on page load (exactly once)
+  const hasRecordedViewRef = useRef(false);
+  const recordViewMutation = trpc.engagement.recordView.useMutation({
+    onSuccess: () => refetchMedia(),
+  });
   useEffect(() => {
-    if (mediaId > 0) {
+    if (mediaId > 0 && !hasRecordedViewRef.current) {
+      hasRecordedViewRef.current = true;
       recordViewMutation.mutate({ mediaFileId: mediaId });
     }
   }, [mediaId]);
+
+  // Play tracking
+  const PLAY_THRESHOLD_SECONDS = 30;
+  const PLAY_THRESHOLD_PERCENTAGE = 0.5;
+  const playStartTimeRef = useRef(0);
+  const hasRecordedPlayRef = useRef(false);
+  const recordPlayMutation = trpc.engagement.recordPlay.useMutation({
+    onSuccess: () => refetchMedia(),
+  });
+
+  const handlePlay = () => {
+    playStartTimeRef.current = 0;
+    hasRecordedPlayRef.current = false;
+  };
+
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLAudioElement | HTMLVideoElement>) => {
+    if (hasRecordedPlayRef.current) return;
+    const el = e.currentTarget;
+    const elapsed = el.currentTime;
+    const duration = el.duration || 0;
+    if (
+      elapsed >= PLAY_THRESHOLD_SECONDS ||
+      (duration > 0 && elapsed / duration >= PLAY_THRESHOLD_PERCENTAGE)
+    ) {
+      hasRecordedPlayRef.current = true;
+      recordPlayMutation.mutate({ mediaFileId: mediaId, playDuration: Math.round(elapsed) });
+    }
+  };
+
+  const handleEnded = (e: React.SyntheticEvent<HTMLAudioElement | HTMLVideoElement>) => {
+    if (hasRecordedPlayRef.current) return;
+    const el = e.currentTarget;
+    hasRecordedPlayRef.current = true;
+    recordPlayMutation.mutate({ mediaFileId: mediaId, playDuration: Math.round(el.duration || 0) });
+  };
 
   // Record download
   const recordDownloadMutation = trpc.engagement.recordDownload.useMutation({
@@ -133,12 +172,12 @@ export default function ShareView() {
             {mediaFile.allowStreaming && (
               <div className="bg-gray-100 rounded-lg p-4">
                 {mediaFile.mediaType === "audio" ? (
-                  <audio controls className="w-full">
+                  <audio controls className="w-full" onPlay={handlePlay} onTimeUpdate={handleTimeUpdate} onEnded={handleEnded}>
                     <source src={mediaFile.fileUrl} type={mediaFile.mimeType || "audio/mpeg"} />
                     Your browser does not support the audio element.
                   </audio>
                 ) : (
-                  <video controls className="w-full rounded-lg">
+                  <video controls className="w-full rounded-lg" onPlay={handlePlay} onTimeUpdate={handleTimeUpdate} onEnded={handleEnded}>
                     <source src={mediaFile.fileUrl} type={mediaFile.mimeType || "video/mp4"} />
                     Your browser does not support the video element.
                   </video>

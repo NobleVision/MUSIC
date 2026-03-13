@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -19,6 +20,7 @@ interface MediaFileCardProps {
 export default function MediaFileCard({ mediaFile, onUpdate }: MediaFileCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [, setLocation] = useLocation();
   const { playMediaFile, currentTrack, isPlaying, togglePlay } = useMusicPlayer();
 
   const isCurrentTrack = currentTrack?.id === mediaFile.id;
@@ -136,7 +138,7 @@ export default function MediaFileCard({ mediaFile, onUpdate }: MediaFileCardProp
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => window.open(mediaFile.fileUrl, '_blank')}>
+                <DropdownMenuItem onClick={() => setLocation(`/media/${mediaFile.id}`)}>
                   <Eye className="w-4 h-4 mr-2" />
                   View
                 </DropdownMenuItem>
