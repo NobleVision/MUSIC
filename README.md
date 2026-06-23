@@ -16,7 +16,7 @@ A comprehensive media management and distribution platform with secure admin acc
 
 ### Chunked Video Uploads
 - **Large File Support**: Files over 95MB are automatically uploaded in 20MB chunks using Cloudinary's chunked upload API (`Content-Range` + `X-Unique-Upload-Id` headers)
-- **Increased Upload Limit**: Client-side max video size increased from 100MB to 250MB (requires Cloudinary Plus plan or higher)
+- **Increased Upload Limit**: Client-side max video size increased from 100MB to 300MB (requires Cloudinary Plus plan or higher)
 - **Extended Timeout**: Upload timeout increased to 15 minutes for large files
 - **Progress Tracking**: Upload progress updates across all chunks
 

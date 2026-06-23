@@ -29,14 +29,14 @@ export interface CloudinaryUploadSignature {
  */
 /**
  * Maximum file sizes for Cloudinary uploads (in bytes)
- * Video: 250MB (requires Plus plan or higher; free plan limit is 100MB)
+ * Video: 300MB (requires Plus plan or higher; free plan limit is 100MB)
  * Image: 10MB, Raw: 10MB
  */
-const MAX_VIDEO_SIZE = 250 * 1024 * 1024; // 250MB
+const MAX_VIDEO_SIZE = 300 * 1024 * 1024; // 300MB
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;  // 10MB
 const MAX_RAW_SIZE = 10 * 1024 * 1024;    // 10MB
 
-/** Upload timeout: 15 minutes for large video files (up to 250MB) */
+/** Upload timeout: 15 minutes for large video files (up to 300MB) */
 const UPLOAD_TIMEOUT_MS = 15 * 60 * 1000;
 
 /**

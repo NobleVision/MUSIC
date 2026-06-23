@@ -17,7 +17,7 @@
 ### Chunked Video Uploads
 - [x] Chunked upload implementation for files over 95MB (20MB chunks)
 - [x] `Content-Range` and `X-Unique-Upload-Id` header support for Cloudinary chunked API
-- [x] Client-side max video size increased to 250MB (requires Cloudinary Plus plan)
+- [x] Client-side max video size increased to 300MB (requires Cloudinary Plus plan)
 - [x] Upload timeout extended to 15 minutes for large files
 - [x] Progress tracking across all upload chunks
 - [x] Upload signature fix (`overwrite` parameter type mismatch between server and client)
